@@ -289,6 +289,7 @@ function toolReverse(){
 const handlers = {
   sweep: toolSweep,
   domain: toolDomain,
+   reverse: toolReverse, 
 };
 
   document.querySelectorAll('.tool-card').forEach(card => {
