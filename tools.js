@@ -342,10 +342,22 @@
 
         if (d.latitude && d.longitude){
           const mapUrl = `https://www.openstreetmap.org/?mlat=${d.latitude}&mlon=${d.longitude}#map=10/${d.latitude}/${d.longitude}`;
-          html += `\n<span class="key">  MAP:</span> <a class="val" href="${mapUrl}" target="_blank" rel="noopener">Открыть карту ↗</a>\n`;
-        }
+          // Если это мой IP — покажем дополнительно
+if (!ip){
+  html += `\n<span style="color:var(--dim)">(это твой публичный IP)</span>\n`;
+}
 
-        out.innerHTML = html;
+// ---- external lookups ----
+const realIp = d.ip;
+html += `\n<span class="ok">> external lookups</span>\n`;
+html += extLink('Shodan',      `https://www.shodan.io/host/${realIp}`,        'открытые порты и сервисы');
+html += extLink('AbuseIPDB',   `https://www.abuseipdb.com/check/${realIp}`,   'жалобы на IP');
+html += extLink('VirusTotal',  `https://www.virustotal.com/gui/ip-address/${realIp}`, 'репутация');
+html += extLink('BGP HE',      `https://bgp.he.net/ip/${realIp}`,             'маршруты и ASN');
+html += extLink('IPinfo',      `https://ipinfo.io/${realIp}`,                 'детали IP');
+html += extLink('ViewDNS',     `https://viewdns.info/reverseip/?host=${realIp}`, 'домены на IP');
+
+out.innerHTML = html;
       } catch(e){
         out.innerHTML = `<span class="err">> error: ${e.message}</span>`;
       }
