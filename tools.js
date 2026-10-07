@@ -21,7 +21,11 @@
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !modal.hidden) closeModal();
   });
+function row(k, v){
+  return `<span class="key">${k}:</span> <span class="val">${String(v).replace(/</g,'&lt;')}</span>\n`;
+}
 
+   
   function extLink(name, url, desc){
   return `  <span class="key">·</span> <a class="val" href="${url}" target="_blank" rel="noopener" style="text-decoration:none">${name}</a> <span style="color:var(--dim);font-size:11px">— ${desc}</span>\n`;
   }
