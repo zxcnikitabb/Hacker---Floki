@@ -244,9 +244,10 @@ function toolDomain(){
 }
 
   // ПОДКЛЮЧЕНИЕ
-  const handlers = {
-    sweep: toolSweep,
-  };
+const handlers = {
+  sweep: toolSweep,
+  domain: toolDomain,
+};
 
   document.querySelectorAll('.tool-card').forEach(card => {
     const tool = card.dataset.tool;
