@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HACKER — FLOKI :: OSINT Terminal</title>
+<meta name="description" content="HACKER — FLOKI :: OSINT terminal, digital forensics, open source intelligence">
+<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Orbitron:wght@500;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- Матричный фон -->
+<canvas id="matrix"></canvas>
+
+<!-- Сканлайны + шум -->
+<div class="scanlines"></div>
+<div class="noise"></div>
+<div class="vignette"></div>
+
+<!-- Курсор-прицел -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-dot" id="cursorDot"></div>
+
+<!-- Загрузочный экран -->
+<div id="boot" class="boot">
+  <pre id="boot-text"></pre>
+</div>
+
+<!-- Хедер -->
+<header class="nav">
+  <div class="logo">
+    <span class="glitch" data-text="HACKER — FLOKI">HACKER — FLOKI</span>
+  </div>
+  <nav>
+    <a href="#home">~/home</a>
+    <a href="#globe">~/globe</a>
+    <a href="#tools">~/tools</a>
+    <a href="#about">~/about</a>
+    <a href="#contact">~/contact</a>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section id="home" class="hero">
+  <div class="hero-content">
+    <p class="tag">[ FLOKI PROTOCOL ONLINE :: ENCRYPTED CHANNEL ]</p>
+    <h1 class="title">
+      <span class="line1">DIGITAL</span>
+      <span class="line2 glitch" data-text="FORENSICS">FORENSICS</span>
+    </h1>
+    <p class="subtitle">
+      <span id="typed"></span><span class="caret">_</span>
+    </p>
+    <div class="cta">
+      <a href="#globe" class="btn">▶ INITIATE_SCAN</a>
+      <a href="#about" class="btn ghost">$ cat /about</a>
+    </div>
+  </div>
+
+  <div class="terminal-window">
+    <div class="terminal-bar">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="term-title">bash — floki@hacker — 80×24</span>
+    </div>
+    <pre id="terminal"></pre>
+  </div>
+</section>
+
+<!-- 3D GLOBE -->
+<section id="globe" class="globe-section">
+  <h2 class="section-title">/<span> GLOBAL_TRACE </span>/</h2>
+  <p class="globe-hint">[ перетаскивай для вращения · скролл для зума ]</p>
+
+  <div class="globe-wrap">
+    <canvas id="globeCanvas"></canvas>
+
+    <div class="globe-hud">
+      <div class="hud-row"><span class="k">TARGETS</span><span class="v" id="hudTargets">0</span></div>
+      <div class="hud-row"><span class="k">ACTIVE_TRACE</span><span class="v" id="hudActive">—</span></div>
+      <div class="hud-row"><span class="k">LAT</span><span class="v" id="hudLat">0.0000</span></div>
+      <div class="hud-row"><span class="k">LON</span><span class="v" id="hudLon">0.0000</span></div>
+      <div class="hud-row"><span class="k">NODES</span><span class="v" id="hudNodes">0</span></div>
+    </div>
+
+    <div class="globe-log" id="globeLog"></div>
+  </div>
+</section>
+
+<!-- TOOLS -->
+<section id="tools" class="tools">
+  <h2 class="section-title">/<span> MODULES </span>/</h2>
+  <div class="grid">
+    <div class="card">
+      <div class="card-icon">◉</div>
+      <h3>Recon</h3>
+      <p>Пассивная разведка, whois, DNS, subdomain enumeration.</p>
+      <span class="status">ACTIVE</span>
+    </div>
+    <div class="card">
+      <div class="card-icon">⌘</div>
+      <h3>Metadata</h3>
+      <p>Извлечение EXIF, геолокации и скрытых данных из файлов.</p>
+      <span class="status">ACTIVE</span>
+    </div>
+    <div class="card">
+      <div class="card-icon">⧉</div>
+      <h3>Social Graph</h3>
+      <p>Поиск по никнеймам, email и цифровым следам.</p>
+      <span class="status">ACTIVE</span>
+    </div>
+    <div class="card">
+      <div class="card-icon">⌬</div>
+      <h3>Network</h3>
+      <p>Анализ трафика, портов и открытых сервисов.</p>
+      <span class="status">STEALTH</span>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about" class="about">
+  <h2 class="section-title">/<span> ABOUT </span>/</h2>
+  <p class="about-text">
+    Мы исследуем открытые источники, чтобы находить то, что скрыто на виду.
+    OSINT — это не взлом, это искусство задавать правильные вопросы.
+  </p>
+  <div class="stats">
+    <div><strong data-count="1337">0</strong><span>scans</span></div>
+    <div><strong data-count="42">0</strong><span>modules</span></div>
+    <div><strong data-count="99">0</strong><span>% uptime</span></div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact" class="contact">
+  <h2 class="section-title">/<span> CONTACT </span>/</h2>
+  <form class="contact-form" onsubmit="event.preventDefault(); this.querySelector('.msg').textContent='> TRANSMISSION SENT :: ENCRYPTED'">
+    <input type="text" placeholder="alias" required>
+    <input type="email" placeholder="secure@floki.onion" required>
+    <textarea placeholder="message (PGP preferred)" rows="4"></textarea>
+    <button class="btn" type="submit">▶ SEND_ENCRYPTED</button>
+    <p class="msg"></p>
+  </form>
+</section>
+
+<footer>
+  <p>© 2025 HACKER — FLOKI — <span class="blink">STAY PARANOID</span></p>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
