@@ -242,6 +242,48 @@ function toolDomain(){
     out.innerHTML = html;
   });
 }
+// REVERSE IMAGE
+function toolReverse(){
+  openModal('REVERSE IMAGE :: search');
+
+  modalBody.innerHTML = `
+    <div class="tool-input-row">
+      <input id="imgUrl" type="url" placeholder="https://example.com/image.jpg" autocomplete="off">
+      <button id="imgRun">▶ SEARCH</button>
+    </div>
+    <div id="imgPreview" style="margin-bottom:16px"></div>
+    <div id="imgOut" class="tool-output">> введи URL картинки</div>
+  `;
+
+  const input   = document.getElementById('imgUrl');
+  const btn     = document.getElementById('imgRun');
+  const out     = document.getElementById('imgOut');
+  const preview = document.getElementById('imgPreview');
+
+  input.focus();
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+
+  btn.addEventListener('click', () => {
+    const url = input.value.trim();
+    if (!url) return;
+
+    preview.innerHTML = `<img src="${esc(url)}" style="max-width:100%;max-height:200px;border:1px solid rgba(0,255,156,.3);border-radius:6px" onerror="this.style.display='none'">`;
+
+    const encoded = encodeURIComponent(url);
+    let html = `<span class="ok">> IMAGE: ${esc(url)}</span>\n\n`;
+    html += `<span class="ok">> поиск по картинке</span>\n`;
+    html += extLink('Google Lens',   `https://lens.google.com/uploadbyurl?url=${encoded}`, 'самый точный');
+    html += extLink('Yandex Images', `https://yandex.com/images/search?rpt=imageview&url=${encoded}`, 'лучший для СНГ');
+    html += extLink('TinEye',        `https://tineye.com/search?url=${encoded}`, 'поиск дубликатов');
+    html += extLink('Bing Visual',   `https://www.bing.com/images/search?view=detailv2&iss=sbi&form=SBIVSP&sbisrc=UrlPaste&q=imgurl:${encoded}`, 'Bing');
+    html += extLink('SauceNAO',      `https://saucenao.com/search.php?url=${encoded}`, 'аниме/арт');
+    html += extLink('Karma Decay',   `https://karmadecay.com/search?q=${encoded}`, 'Reddit');
+    html += extLink('PimEyes',       `https://pimeyes.com/en`, 'поиск по лицу (вставить вручную)');
+    html += `\n<span style="color:var(--dim)">> тапни сервис — откроется в новой вкладке</span>`;
+
+    out.innerHTML = html;
+  });
+}
 
   // ПОДКЛЮЧЕНИЕ
 const handlers = {
