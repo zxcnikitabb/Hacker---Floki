@@ -284,6 +284,71 @@ function toolReverse(){
     out.innerHTML = html;
   });
 }
+// IP LOCATION
+function toolIpLoc(){
+  openModal('IP LOCATION :: geo');
+
+  modalBody.innerHTML = `
+    <div class="tool-input-row">
+      <input id="iplTarget" type="text" placeholder="8.8.8.8 или пусто = мой IP" autocomplete="off">
+      <button id="iplRun">▶ LOCATE</button>
+    </div>
+    <div id="iplOut" class="tool-output">> введи IP</div>
+  `;
+
+  const input = document.getElementById('iplTarget');
+  const btn   = document.getElementById('iplRun');
+  const out   = document.getElementById('iplOut');
+
+  input.focus();
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+
+  btn.addEventListener('click', async () => {
+    const ip = input.value.trim();
+    out.innerHTML = '<span class="tool-loading">> получение локации</span>';
+
+    try {
+      const url = ip ? `https://ipwho.is/${encodeURIComponent(ip)}` : 'https://ipwho.is/';
+      const r = await fetch(url);
+      const d = await r.json();
+
+      if (!d.success){
+        out.innerHTML = `<span class="err">> ${esc(d.message || 'не удалось')}</span>`;
+        return;
+      }
+
+      const flag = d.country_code
+        ? `<img src="https://flagcdn.com/w40/${d.country_code.toLowerCase()}.png" style="vertical-align:middle;margin-left:6px;border:1px solid rgba(0,255,156,.3)">`
+        : '';
+
+      let html = `<span class="ok">> IP: ${esc(d.ip)} ${flag}</span>\n\n`;
+      html += `<span class="key">  country:</span> <span class="val">${esc(d.country)} (${esc(d.country_code)})</span>\n`;
+      html += `<span class="key">  region:</span> <span class="val">${esc(d.region || '—')}</span>\n`;
+      html += `<span class="key">  city:</span> <span class="val">${esc(d.city || '—')}</span>\n`;
+      html += `<span class="key">  postal:</span> <span class="val">${esc(d.postal || '—')}</span>\n`;
+      html += `<span class="key">  lat:</span> <span class="val">${d.latitude}</span>\n`;
+      html += `<span class="key">  lon:</span> <span class="val">${d.longitude}</span>\n`;
+      html += `<span class="key">  timezone:</span> <span class="val">${esc(d.timezone?.id || '—')}</span>\n`;
+      html += `<span class="key">  ASN:</span> <span class="val">${esc(d.connection?.asn || '—')}</span>\n`;
+      html += `<span class="key">  ISP:</span> <span class="val">${esc(d.connection?.isp || '—')}</span>\n`;
+
+      if (d.latitude && d.longitude){
+        const mapUrl = `https://www.openstreetmap.org/?mlat=${d.latitude}&mlon=${d.longitude}#map=10/${d.latitude}/${d.longitude}`;
+        const gmapUrl = `https://www.google.com/maps?q=${d.latitude},${d.longitude}`;
+        html += `\n<span class="ok">> карта</span>\n`;
+        html += `  <span class="key">·</span> <a class="val" href="${mapUrl}" target="_blank" rel="noopener" style="text-decoration:none">OpenStreetMap</a>\n`;
+        html += `  <span class="key">·</span> <a class="val" href="${gmapUrl}" target="_blank" rel="noopener" style="text-decoration:none">Google Maps</a>\n`;
+
+        const staticMap = `https://staticmap.openstreetmap.de/staticmap.php?center=${d.latitude},${d.longitude}&zoom=8&size=600x300&maptype=mapnik&markers=${d.latitude},${d.longitude},red-pushpin`;
+        html += `\n<img src="${staticMap}" style="width:100%;max-width:600px;border:1px solid rgba(0,255,156,.3);border-radius:6px;margin-top:10px" onerror="this.style.display='none'">\n`;
+      }
+
+      out.innerHTML = html;
+    } catch(e){
+      out.innerHTML = `<span class="err">> error: ${esc(e.message)}</span>`;
+    }
+  });
+}
 
   // ПОДКЛЮЧЕНИЕ
 const handlers = {
