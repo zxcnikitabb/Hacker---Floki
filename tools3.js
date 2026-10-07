@@ -349,6 +349,183 @@ function toolIpLoc(){
     }
   });
 }
+// JWT / BASE64 DECODER
+function toolJwt(){
+  openModal('JWT / BASE64 :: decoder');
+
+  modalBody.innerHTML = `
+    <div class="tool-input-row">
+      <input id="jwtInput" type="text" placeholder="JWT или Base64 строка" autocomplete="off">
+      <button id="jwtRun">▶ DECODE</button>
+    </div>
+    <div id="jwtOut" class="tool-output">> вставь JWT или Base64</div>
+  `;
+
+  const input = document.getElementById('jwtInput');
+  const btn   = document.getElementById('jwtRun');
+  const out   = document.getElementById('jwtOut');
+
+  input.focus();
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+
+  // base64url → base64
+  function b64urlToB64(s){
+    s = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    return s;
+  }
+
+  function decodeB64(s){
+    try {
+      const bin = atob(b64urlToB64(s));
+      // UTF-8 fix
+      return decodeURIComponent(escape(bin));
+    } catch(e){
+      try { return atob(b64urlToB64(s)); } catch(_){ return null; }
+    }
+  }
+
+  function prettyJson(str){
+    try {
+      const obj = JSON.parse(str);
+      return JSON.stringify(obj, null, 2);
+    } catch(_){ return str; }
+  }
+
+  btn.addEventListener('click', () => {
+    const raw = input.value.trim();
+    if (!raw) return;
+
+    let html = '';
+    const parts = raw.split('.');
+
+    // === JWT? (3 части, base64url) ===
+    if (parts.length === 3 && parts.every(p => /^[A-Za-z0-9_\-]+$/.test(p))){
+      html += `<span class="ok">> JWT DETECTED</span>\n\n`;
+
+      const header  = decodeB64(parts[0]);
+      const payload = decodeB64(parts[1]);
+      const sig     = parts[2];
+
+      if (!header || !payload){
+        html += `<span class="err">> не удалось раскодировать JWT</span>`;
+        out.innerHTML = html;
+        return;
+      }
+
+      // header
+      html += `<span class="ok">> HEADER</span>\n`;
+      html += `<span class="val">${esc(prettyJson(header))}</span>\n\n`;
+
+      // payload
+      html += `<span class="ok">> PAYLOAD</span>\n`;
+      html += `<span class="val">${esc(prettyJson(payload))}</span>\n\n`;
+
+      // signature
+      html += `<span class="ok">> SIGNATURE</span>\n`;
+      html += `<span style="color:var(--dim)">${esc(sig)} (не раскодируется — это хеш)</span>\n\n`;
+
+      // доп. анализ
+      html += `<span class="ok">> ANALYSIS</span>\n`;
+      try {
+        const h = JSON.parse(header);
+        const p = JSON.parse(payload);
+
+        if (h.alg) html += `<span class="key">  algorithm:</span> <span class="val">${esc(h.alg)}</span>\n`;
+        if (h.typ) html += `<span class="key">  type:</span> <span class="val">${esc(h.typ)}</span>\n`;
+
+        if (h.alg === 'none'){
+          html += `<span class="err">  ⚠️ ALGORITHM NONE — токен не подписан! Уязвимость.</span>\n`;
+        }
+
+        if (p.exp){
+          const expDate = new Date(p.exp * 1000);
+          const now = new Date();
+          const expired = expDate < now;
+          html += `<span class="key">  expires:</span> <span class="val">${expDate.toLocaleString('ru-RU')}</span>`;
+          html += expired
+            ? ` <span class="err">[ИСТЁК]</span>\n`
+            : ` <span class="ok">[активен]</span>\n`;
+        }
+        if (p.iat){
+          html += `<span class="key">  issued at:</span> <span class="val">${new Date(p.iat * 1000).toLocaleString('ru-RU')}</span>\n`;
+        }
+        if (p.nbf){
+          html += `<span class="key">  not before:</span> <span class="val">${new Date(p.nbf * 1000).toLocaleString('ru-RU')}</span>\n`;
+        }
+        if (p.iss)  html += `<span class="key">  issuer:</span> <span class="val">${esc(p.iss)}</span>\n`;
+        if (p.sub)  html += `<span class="key">  subject:</span> <span class="val">${esc(p.sub)}</span>\n`;
+        if (p.aud)  html += `<span class="key">  audience:</span> <span class="val">${esc(JSON.stringify(p.aud))}</span>\n`;
+      } catch(_){}
+
+      html += `\n<span class="ok">> external</span>\n`;
+      html += extLink('jwt.io', `https://jwt.io/#debugger-io?token=${encodeURIComponent(raw)}`, 'онлайн-дебаггер');
+
+      out.innerHTML = html;
+      return;
+    }
+
+    // === Просто Base64 / Base64url ===
+    if (/^[A-Za-z0-9+/=_\-\s]+$/.test(raw)){
+      const decoded = decodeB64(raw.replace(/\s/g, ''));
+      if (decoded !== null){
+        html += `<span class="ok">> BASE64 DETECTED</span>\n\n`;
+        html += `<span class="key">  length:</span> <span class="val">${raw.length} chars</span>\n`;
+        html += `<span class="key">  type:</span> <span class="val">${/[_-]/.test(raw) ? 'base64url' : 'base64'}</span>\n\n`;
+        html += `<span class="ok">> DECODED</span>\n`;
+        html += `<span class="val">${esc(decoded)}</span>\n\n`;
+
+        // если это JSON — красиво
+        const pretty = prettyJson(decoded);
+        if (pretty !== decoded){
+          html += `<span class="ok">> AS JSON</span>\n`;
+          html += `<span class="val">${esc(pretty)}</span>\n`;
+        }
+
+        out.innerHTML = html;
+        return;
+      }
+    }
+
+    // === HEX ===
+    if (/^[0-9a-fA-F\s]+$/.test(raw) && raw.replace(/\s/g,'').length % 2 === 0){
+      try {
+        const hex = raw.replace(/\s/g,'');
+        let str = '';
+        for (let i = 0; i < hex.length; i += 2){
+          str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+        }
+        const utf8 = decodeURIComponent(escape(str));
+        html += `<span class="ok">> HEX DETECTED</span>\n\n`;
+        html += `<span class="ok">> DECODED</span>\n`;
+        html += `<span class="val">${esc(utf8)}</span>\n`;
+        out.innerHTML = html;
+        return;
+      } catch(_){}
+    }
+
+    // === URL-encoded ===
+    if (/%[0-9a-fA-F]{2}/.test(raw)){
+      try {
+        const decoded = decodeURIComponent(raw);
+        html += `<span class="ok">> URL-ENCODED DETECTED</span>\n\n`;
+        html += `<span class="ok">> DECODED</span>\n`;
+        html += `<span class="val">${esc(decoded)}</span>\n`;
+        out.innerHTML = html;
+        return;
+      } catch(_){}
+    }
+
+    // Не распознали
+    html += `<span class="err">> не удалось определить формат</span>\n\n`;
+    html += `<span class="key">поддерживаются:</span>\n`;
+    html += `  · JWT (три части через точку)\n`;
+    html += `  · Base64 / Base64url\n`;
+    html += `  · Hex (чётное кол-во символов 0-9,a-f)\n`;
+    html += `  · URL-encoded (%XX)\n`;
+    out.innerHTML = html;
+  });
+}
 
   // ПОДКЛЮЧЕНИЕ
 const handlers = {
