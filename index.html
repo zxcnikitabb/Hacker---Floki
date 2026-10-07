@@ -93,40 +93,75 @@
 <!-- TOOLS -->
 <section id="tools" class="tools">
   <h2 class="section-title">/<span> MODULES </span>/</h2>
-  <div class="grid">
+  <p class="globe-hint">[ клик по модулю — запуск инструмента ]</p>
+  <div class="grid" id="toolsGrid">
+
     <div class="card tool-card" data-tool="recon">
-  <div class="card-icon">◉</div>
-  <h3>Recon</h3>
-  <p>DNS lookup, WHOIS через RDAP, reverse DNS. Работает без API-ключей.</p>
-  <span class="status">READY</span>
-  <span class="launch">▶ LAUNCH</span>
-</div>
-<div class="card tool-card" data-tool="metadata">
-  <div class="card-icon">⌘</div>
-  <h3>Metadata</h3>
-  <p>EXIF-анализ фото: камера, дата, GPS, софт. Файл обрабатывается локально.</p>
-  <span class="status">READY</span>
-  <span class="launch">▶ LAUNCH</span>
-</div>
-<div class="card tool-card" data-tool="social">
-  <div class="card-icon">⧉</div>
-  <h3>Social Graph</h3>
-  <p>Проверка username по популярным платформам: GitHub, Reddit, Instagram и др.</p>
-  <span class="status">READY</span>
-  <span class="launch">▶ LAUNCH</span>
-</div>
-<div class="card tool-card" data-tool="network">
-  <div class="card-icon">⌬</div>
-  <h3>Network</h3>
-  <p>Геолокация IP, ASN, ISP, timezone, VPN-детект. Работает без ключей.</p>
-  <span class="status">READY</span>
-  <span class="launch">▶ LAUNCH</span>
-</div>
+      <div class="card-icon">◉</div>
+      <h3>Recon</h3>
+      <p>DNS lookup, WHOIS через RDAP, reverse DNS. Работает без API-ключей.</p>
+      <span class="status">READY</span>
+      <span class="launch">▶ LAUNCH</span>
+    </div>
+
+    <div class="card tool-card" data-tool="metadata">
+      <div class="card-icon">⌘</div>
+      <h3>Metadata</h3>
+      <p>EXIF-анализ фото: камера, дата, GPS, софт. Файл обрабатывается локально.</p>
+      <span class="status">READY</span>
+      <span class="launch">▶ LAUNCH</span>
+    </div>
+
+    <div class="card tool-card" data-tool="social">
+      <div class="card-icon">⧉</div>
+      <h3>Social Graph</h3>
+      <p>Проверка username по популярным платформам: GitHub, Reddit, Instagram и др.</p>
+      <span class="status">READY</span>
+      <span class="launch">▶ LAUNCH</span>
+    </div>
+
+    <div class="card tool-card" data-tool="network">
+      <div class="card-icon">⌬</div>
+      <h3>Network</h3>
+      <p>Геолокация IP, ASN, ISP, timezone, VPN-детект. Работает без ключей.</p>
+      <span class="status">READY</span>
+      <span class="launch">▶ LAUNCH</span>
+    </div>
+
+    <div class="card tool-card" data-tool="subdomains">
+      <div class="card-icon">⛓</div>
+      <h3>Subdomains</h3>
+      <p>Поиск всех поддоменов через SSL-сертификаты (crt.sh). Реальный subdomain enumeration.</p>
+      <span class="status">READY</span>
+      <span class="launch">▶ LAUNCH</span>
+    </div>
+
+    <div class="card tool-card" data-tool="ipwhois">
+      <div class="card-icon">◈</div>
+      <h3>IP WHOIS</h3>
+      <p>WHOIS-информация по IP-адресу через RDAP: сеть, страна, организация, ASN.</p>
+      <span class="status">READY</span>
+      <span class="launch">▶ LAUNCH</span>
+    </div>
+
+    <div class="card tool-card" data-tool="email">
+      <div class="card-icon">✉</div>
+      <h3>Email Check</h3>
+      <p>Проверка email: синтаксис, MX-записи домена, disposable/temporary, deliverability.</p>
+      <span class="status">READY</span>
+      <span class="launch">▶ LAUNCH</span>
+    </div>
+
+    <div class="card tool-card" data-tool="hash">
+      <div class="card-icon">#</div>
+      <h3>Hash Lookup</h3>
+      <p>Определение типа хеша (MD5/SHA1/SHA256) и поиск расшифровки в публичной БД.</p>
+      <span class="status">READY</span>
+      <span class="launch">▶ LAUNCH</span>
+    </div>
+
   </div>
 </section>
-
-
-  
 
 <!-- МОДАЛКА ИНСТРУМЕНТА -->
 <div class="tool-modal" id="toolModal" hidden>
@@ -142,6 +177,7 @@
     <div class="tool-modal-body" id="modalBody"></div>
   </div>
 </div>
+
 <!-- ABOUT -->
 <section id="about" class="about">
   <h2 class="section-title">/<span> ABOUT </span>/</h2>
@@ -171,9 +207,10 @@
 <footer>
   <p>© 2025 HACKER — FLOKI — <span class="blink">STAY PARANOID</span></p>
 </footer>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
 <script src="script.js"></script>
 <script src="tools.js"></script>
+<script src="tools2.js"></script>
 </body>
 </html>
-
