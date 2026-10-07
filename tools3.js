@@ -355,6 +355,7 @@ const handlers = {
   sweep: toolSweep,
   domain: toolDomain,
    reverse: toolReverse, 
+   iploc: toolIpLoc,
 };
 
   document.querySelectorAll('.tool-card').forEach(card => {
