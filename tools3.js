@@ -533,6 +533,7 @@ const handlers = {
   domain: toolDomain,
    reverse: toolReverse, 
    iploc: toolIpLoc,
+   jwt: toolJwt,
 };
 
   document.querySelectorAll('.tool-card').forEach(card => {
