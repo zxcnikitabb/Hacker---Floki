@@ -4,45 +4,36 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HACKER — FLOKI :: OSINT Terminal</title>
-<meta name="description" content="HACKER — FLOKI :: OSINT terminal, digital forensics, open source intelligence">
+<meta name="description" content="HACKER — FLOKI :: OSINT terminal">
 <link rel="stylesheet" href="style.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Orbitron:wght@500;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<!-- Матричный фон -->
 <canvas id="matrix"></canvas>
-
-<!-- Сканлайны + шум -->
 <div class="scanlines"></div>
 <div class="noise"></div>
 <div class="vignette"></div>
-
-<!-- Курсор-прицел -->
 <div class="cursor" id="cursor"></div>
 <div class="cursor-dot" id="cursorDot"></div>
 
-<!-- Загрузочный экран -->
-<div id="boot" class="boot done">
+<div id="boot" class="boot">
   <pre id="boot-text"></pre>
 </div>
 
-<!-- Хедер -->
 <header class="nav">
   <div class="logo">
     <span class="glitch" data-text="HACKER — FLOKI">HACKER — FLOKI</span>
   </div>
   <nav>
     <a href="#home">~/home</a>
-    <a href="#globe">~/globe</a>
     <a href="#tools">~/tools</a>
     <a href="#about">~/about</a>
     <a href="#contact">~/contact</a>
   </nav>
 </header>
 
-<!-- HERO -->
 <section id="home" class="hero">
   <div class="hero-content">
     <p class="tag">[ FLOKI PROTOCOL ONLINE :: ENCRYPTED CHANNEL ]</p>
@@ -54,7 +45,7 @@
       <span id="typed"></span><span class="caret">_</span>
     </p>
     <div class="cta">
-      <a href="#globe" class="btn">▶ INITIATE_SCAN</a>
+      <a href="#tools" class="btn">▶ INITIATE_SCAN</a>
       <a href="#about" class="btn ghost">$ cat /about</a>
     </div>
   </div>
@@ -70,27 +61,6 @@
   </div>
 </section>
 
-<!-- 3D GLOBE -->
-<section id="globe" class="globe-section">
-  <h2 class="section-title">/<span> GLOBAL_TRACE </span>/</h2>
-  <p class="globe-hint">[ перетаскивай для вращения · скролл для зума ]</p>
-
-  <div class="globe-wrap">
-    <canvas id="globeCanvas"></canvas>
-
-    <div class="globe-hud">
-      <div class="hud-row"><span class="k">TARGETS</span><span class="v" id="hudTargets">0</span></div>
-      <div class="hud-row"><span class="k">ACTIVE_TRACE</span><span class="v" id="hudActive">—</span></div>
-      <div class="hud-row"><span class="k">LAT</span><span class="v" id="hudLat">0.0000</span></div>
-      <div class="hud-row"><span class="k">LON</span><span class="v" id="hudLon">0.0000</span></div>
-      <div class="hud-row"><span class="k">NODES</span><span class="v" id="hudNodes">0</span></div>
-    </div>
-
-    <div class="globe-log" id="globeLog"></div>
-  </div>
-</section>
-
-<!-- TOOLS -->
 <section id="tools" class="tools">
   <h2 class="section-title">/<span> MODULES </span>/</h2>
   <p class="globe-hint">[ клик по модулю — запуск инструмента ]</p>
@@ -163,7 +133,6 @@
   </div>
 </section>
 
-<!-- МОДАЛКА ИНСТРУМЕНТА -->
 <div class="tool-modal" id="toolModal" hidden>
   <div class="tool-modal-backdrop" data-close></div>
   <div class="tool-modal-window">
@@ -178,7 +147,6 @@
   </div>
 </div>
 
-<!-- ABOUT -->
 <section id="about" class="about">
   <h2 class="section-title">/<span> ABOUT </span>/</h2>
   <p class="about-text">
@@ -192,7 +160,6 @@
   </div>
 </section>
 
-<!-- CONTACT -->
 <section id="contact" class="contact">
   <h2 class="section-title">/<span> CONTACT </span>/</h2>
   <form class="contact-form" onsubmit="event.preventDefault(); this.querySelector('.msg').textContent='> TRANSMISSION SENT :: ENCRYPTED'">
@@ -207,6 +174,9 @@
 <footer>
   <p>© 2025 HACKER — FLOKI — <span class="blink">STAY PARANOID</span></p>
 </footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
+<script src="script.js"></script>
 <script src="tools.js"></script>
 <script src="tools2.js"></script>
 </body>
