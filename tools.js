@@ -339,11 +339,14 @@
           html += row('  proxy', d.security.is_proxy);
           html += row('  Tor',   d.security.is_tor);
         }
+   if (d.latitude && d.longitude){
+   const mapUrl = `https://www.openstreetmap.org/?mlat=${d.latitude}&mlon=${d.longitude}#map=10/${d.latitude}/${d.longitude}`;
+   html += `\n<span class="key">  MAP:</span> <a class="val" href="${mapUrl}" target="_blank" rel="noopener">Открыть карту ↗</a>\n`;
+}
 
-        if (d.latitude && d.longitude){
-          const mapUrl = `https://www.openstreetmap.org/?mlat=${d.latitude}&mlon=${d.longitude}#map=10/${d.latitude}/${d.longitude}`;
-          // Если это мой IP — покажем дополнительно
-if (!ip){
+// Если это мой IP — покажем дополнительно
+  if (!ip){
+        
   html += `\n<span style="color:var(--dim)">(это твой публичный IP)</span>\n`;
 }
 
