@@ -151,6 +151,97 @@
       out.innerHTML = html;
     });
   }
+// DOMAIN INFO
+function toolDomain(){
+  openModal('DOMAIN INFO :: rdap + dns');
+
+  modalBody.innerHTML = `
+    <div class="tool-input-row">
+      <input id="domTarget" type="text" placeholder="example.com" autocomplete="off">
+      <button id="domRun">▶ ANALYZE</button>
+    </div>
+    <div id="domOut" class="tool-output">> введи домен для анализа</div>
+  `;
+
+  const input = document.getElementById('domTarget');
+  const btn   = document.getElementById('domRun');
+  const out   = document.getElementById('domOut');
+
+  input.focus();
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+
+  btn.addEventListener('click', async () => {
+    const domain = input.value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+    if (!domain) return;
+
+    out.innerHTML = '<span class="tool-loading">> анализ домена</span>';
+    let html = `<span class="ok">> DOMAIN: ${esc(domain)}</span>\n\n`;
+
+    try {
+      const r = await fetch(`https://rdap.org/domain/${encodeURIComponent(domain)}`);
+      if (r.ok){
+        const d = await r.json();
+        const events = d.events || [];
+        const reg = events.find(e => e.eventAction === 'registration');
+        const exp = events.find(e => e.eventAction === 'expiration');
+        const upd = events.find(e => e.eventAction === 'last changed');
+
+        if (reg){
+          const regDate = new Date(reg.eventDate);
+          const ageDays = Math.floor((Date.now() - regDate.getTime()) / 86400000);
+          const ageYears = (ageDays / 365).toFixed(1);
+          html += `<span class="key">  registered:</span> <span class="val">${reg.eventDate} (${ageDays} дней / ${ageYears} лет)</span>\n`;
+        }
+        if (exp){
+          const expDate = new Date(exp.eventDate);
+          const daysLeft = Math.floor((expDate.getTime() - Date.now()) / 86400000);
+          html += `<span class="key">  expires:</span> <span class="val">${exp.eventDate} (${daysLeft} дней)</span>\n`;
+        }
+        if (upd) html += `<span class="key">  updated:</span> <span class="val">${upd.eventDate}</span>\n`;
+        if (d.status) html += `<span class="key">  status:</span> <span class="val">${d.status.join(', ')}</span>\n`;
+
+        const registrar = (d.entities || []).find(e => (e.roles || []).includes('registrar'));
+        if (registrar && registrar.vcardArray){
+          const fn = registrar.vcardArray[1].find(v => v[0] === 'fn');
+          if (fn) html += `<span class="key">  registrar:</span> <span class="val">${esc(fn[3])}</span>\n`;
+        }
+
+        if (d.nameservers && d.nameservers.length){
+          html += '\n<span class="ok">> nameservers</span>\n';
+          d.nameservers.forEach(ns => html += `  <span class="val">${esc(ns.ldhName)}</span>\n`);
+        }
+      } else {
+        html += `<span class="err">> RDAP: не найдено (${r.status})</span>\n`;
+      }
+    } catch(e){
+      html += `<span class="err">> RDAP error: ${esc(e.message)}</span>\n`;
+    }
+
+    const dnsTypes = ['A','AAAA','MX','NS','TXT','CNAME'];
+    html += '\n<span class="ok">> DNS records</span>\n';
+    for (const t of dnsTypes){
+      try {
+        const r = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${t}`);
+        const d = await r.json();
+        const answers = (d.Answer || []).map(a => a.data);
+        if (answers.length){
+          html += `  <span class="key">${t}:</span>\n`;
+          answers.slice(0, 5).forEach(a => html += `    <span class="val">${esc(a)}</span>\n`);
+        }
+      } catch(e){}
+    }
+
+    html += '\n<span class="ok">> external lookups</span>\n';
+    html += extLink('Whois',      `https://who.is/whois/${domain}`, 'классический whois');
+    html += extLink('crt.sh',     `https://crt.sh/?q=${domain}`, 'SSL сертификаты');
+    html += extLink('URLScan',    `https://urlscan.io/domain/${domain}`, 'сканы');
+    html += extLink('VirusTotal', `https://www.virustotal.com/gui/domain/${domain}`, 'репутация');
+    html += extLink('Wayback',    `https://web.archive.org/web/*/${domain}`, 'архив');
+    html += extLink('SecurityTrails', `https://securitytrails.com/domain/${domain}/dns`, 'история DNS');
+
+    out.innerHTML = html;
+  });
+}
 
   // ПОДКЛЮЧЕНИЕ
   const handlers = {
