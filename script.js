@@ -1,7 +1,3 @@
-/* =========================================================
-   HACKER — FLOKI :: OSINT TERMINAL
-   ========================================================= */
-
 /* ============ MATRIX RAIN ============ */
 (() => {
   const c = document.getElementById('matrix');
@@ -38,7 +34,6 @@
       ctx.shadowBlur = 8;
       ctx.fillText(ch, i * fontSize, y);
       ctx.shadowBlur = 0;
-
       if (y > h && Math.random() > 0.975) drops[i] = 0;
       drops[i]++;
     }
@@ -172,10 +167,7 @@
   setTimeout(tick, 2600);
 })();
 
-/* =========================================================
-   3D GLOBE :: HACKER — FLOKI
-   Собственная реализация на Canvas 2D (без библиотек)
-   ========================================================= */
+/* ============ 3D GLOBE ============ */
 (() => {
   const canvas = document.getElementById('globeCanvas');
   if (!canvas) return;
@@ -197,7 +189,6 @@
   window.addEventListener('resize', resize);
   if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
 
-  // --- Параметры вращения ---
   let rotX = -0.35;
   let rotY = 0.6;
   let autoSpin = 0.0022;
@@ -205,7 +196,6 @@
   let targetZoom = 1;
   let dragging = false, lastX = 0, lastY = 0;
 
-  // --- Кластеры-города ---
   const cityClusters = [
     {lat: 55.75,  lon:   37.62, name: 'MOSCOW'},
     {lat: 40.71,  lon:  -74.00, name: 'NEW YORK'},
@@ -267,11 +257,8 @@
     {lat: 37.98,  lon:   23.73, name: 'ATHENS'},
     {lat: 41.90,  lon:   12.50, name: 'ROME'},
     {lat: 40.42,  lon:   -3.70, name: 'MADRID'},
-    {lat: 51.11,  lon:   17.03, name: 'WROCLAW'},
-    {lat: 50.45,  lon:   30.52, name: 'KYIV2'},
-  ].filter(c => !c.name.endsWith('2'));
+  ];
 
-  // Сферические координаты
   function latLonToXYZ(lat, lon, r){
     const phi   = (90 - lat) * Math.PI / 180;
     const theta = (lon + 180) * Math.PI / 180;
@@ -282,18 +269,14 @@
     };
   }
 
-  // Вращение точки
   function rotate(p){
-    // Y
     let x = p.x * Math.cos(rotY) - p.z * Math.sin(rotY);
     let z = p.x * Math.sin(rotY) + p.z * Math.cos(rotY);
-    // X
     let y = p.y * Math.cos(rotX) - z * Math.sin(rotX);
     let z2 = p.y * Math.sin(rotX) + z * Math.cos(rotX);
     return { x, y, z: z2 };
   }
 
-  // Проекция
   function project(p){
     const d = 3.2;
     const scale = (d / (d + p.z)) * zoom;
@@ -305,22 +288,13 @@
     };
   }
 
-  // Массив точек
   const RADIUS = 1;
   const points = cityClusters.map(c => {
     const p = latLonToXYZ(c.lat, c.lon, RADIUS);
-    return {
-      base: p,
-      name: c.name,
-      lat: c.lat,
-      lon: c.lon,
-      pulse: Math.random() * Math.PI * 2,
-    };
+    return { base: p, name: c.name, lat: c.lat, lon: c.lon, pulse: Math.random() * Math.PI * 2 };
   });
 
-  // Сетка меридианов/параллелей
   const gridLines = [];
-  // Параллели
   for (let lat = -60; lat <= 60; lat += 30){
     const pts = [];
     for (let lon = 0; lon <= 360; lon += 6){
@@ -328,7 +302,6 @@
     }
     gridLines.push(pts);
   }
-  // Меридианы
   for (let lon = 0; lon < 360; lon += 30){
     const pts = [];
     for (let lat = -90; lat <= 90; lat += 4){
@@ -337,9 +310,7 @@
     gridLines.push(pts);
   }
 
-  // Трассировки
   const traces = [];
-  const traceLog = [];
   const MAX_TRACES = 6;
 
   function spawnTrace(){
@@ -351,8 +322,7 @@
     if (b === a) return;
 
     traces.push({
-      from: a,
-      to: b,
+      from: a, to: b,
       progress: 0,
       speed: 0.006 + Math.random() * 0.008,
       suspicious: Math.random() < 0.18,
@@ -360,11 +330,9 @@
       maxLife: 280,
     });
 
-    // HUD update
     const active = document.getElementById('hudActive');
     if (active) active.textContent = `${a.name} → ${b.name}`.slice(0, 26);
 
-    // Лог
     const line = document.createElement('div');
     line.className = 'log-line';
     const tag = traces[traces.length - 1].suspicious ? '⚠ ANOMALY' : '✓ ROUTE';
@@ -377,23 +345,19 @@
     }
   }
 
-  // --- Взаимодействие ---
   canvas.addEventListener('mousedown', e => {
     dragging = true;
     lastX = e.clientX; lastY = e.clientY;
   });
   window.addEventListener('mousemove', e => {
     if (!dragging) return;
-    const dx = e.clientX - lastX;
-    const dy = e.clientY - lastY;
-    rotY += dx * 0.005;
-    rotX += dy * 0.005;
+    rotY += (e.clientX - lastX) * 0.005;
+    rotX += (e.clientY - lastY) * 0.005;
     rotX = Math.max(-1.2, Math.min(1.2, rotX));
     lastX = e.clientX; lastY = e.clientY;
   });
   window.addEventListener('mouseup', () => { dragging = false; });
 
-  // Touch
   canvas.addEventListener('touchstart', e => {
     if (e.touches[0]){
       dragging = true;
@@ -403,65 +367,50 @@
   }, { passive: true });
   canvas.addEventListener('touchmove', e => {
     if (!dragging || !e.touches[0]) return;
-    const dx = e.touches[0].clientX - lastX;
-    const dy = e.touches[0].clientY - lastY;
-    rotY += dx * 0.008;
-    rotX += dy * 0.008;
+    rotY += (e.touches[0].clientX - lastX) * 0.008;
+    rotX += (e.touches[0].clientY - lastY) * 0.008;
     rotX = Math.max(-1.2, Math.min(1.2, rotX));
     lastX = e.touches[0].clientX;
     lastY = e.touches[0].clientY;
   }, { passive: true });
   canvas.addEventListener('touchend', () => { dragging = false; });
 
-  // Zoom
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
     targetZoom += -e.deltaY * 0.001;
     targetZoom = Math.max(0.6, Math.min(2.4, targetZoom));
   }, { passive: false });
 
-  // HUD координаты
   const hudLat = document.getElementById('hudLat');
   const hudLon = document.getElementById('hudLon');
   const hudNodes = document.getElementById('hudNodes');
   const hudTargets = document.getElementById('hudTargets');
   if (hudNodes) hudNodes.textContent = points.length;
   let targets = 0;
-  if (hudTargets) hudTargets.textContent = '0';
 
-  // Спавн трасс
   setInterval(() => {
-    if (!document.hidden && isInViewport()) {
-      spawnTrace();
-      targets += 1 + Math.floor(Math.random() * 3);
-      if (hudTargets) hudTargets.textContent = targets.toLocaleString();
+    if (!document.hidden){
+      const r = wrap.getBoundingClientRect();
+      if (r.bottom > 0 && r.top < window.innerHeight){
+        spawnTrace();
+        targets += 1 + Math.floor(Math.random() * 3);
+        if (hudTargets) hudTargets.textContent = targets.toLocaleString();
+      }
     }
   }, 620);
 
-  function isInViewport(){
-    const r = wrap.getBoundingClientRect();
-    return r.bottom > 0 && r.top < window.innerHeight;
-  }
-
-  // Главный цикл
-  let lastT = performance.now();
   function loop(t){
     requestAnimationFrame(loop);
 
-    // Автоспин только когда не тащим
     if (!dragging) rotY += autoSpin;
-
-    // Плавный зум
     zoom += (targetZoom - zoom) * 0.08;
 
-    // Фон
     ctx.clearRect(0, 0, W, H);
 
     const cx = W / 2;
     const cy = H / 2;
     const R = Math.min(W, H) * 0.42 * zoom;
 
-    // Свечение сферы
     const grad = ctx.createRadialGradient(cx, cy, R * 0.1, cx, cy, R * 1.35);
     grad.addColorStop(0, 'rgba(0,255,156,0.18)');
     grad.addColorStop(0.5, 'rgba(0,255,156,0.06)');
@@ -471,14 +420,12 @@
     ctx.arc(cx, cy, R * 1.35, 0, Math.PI * 2);
     ctx.fill();
 
-    // Контур сферы
     ctx.strokeStyle = 'rgba(0,255,156,0.55)';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.arc(cx, cy, R, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Внутренний оттенок (сфера)
     const inner = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.3, R * 0.1, cx, cy, R);
     inner.addColorStop(0, 'rgba(0,255,156,0.05)');
     inner.addColorStop(0.8, 'rgba(0,20,10,0.25)');
@@ -488,7 +435,6 @@
     ctx.arc(cx, cy, R, 0, Math.PI * 2);
     ctx.fill();
 
-    // Сетка
     ctx.strokeStyle = 'rgba(0,255,156,0.18)';
     ctx.lineWidth = 0.7;
     gridLines.forEach(pts => {
@@ -497,17 +443,13 @@
       for (const p of pts){
         const rp = rotate(p);
         const pr = project(rp);
-        if (rp.z < -0.05) { // скрыть заднюю полусферу
-          started = false;
-          continue;
-        }
+        if (rp.z < -0.05) { started = false; continue; }
         if (!started){ ctx.moveTo(pr.x, pr.y); started = true; }
         else ctx.lineTo(pr.x, pr.y);
       }
       ctx.stroke();
     });
 
-    // Точки (сначала задние, потом передние для правильного перекрытия)
     const rendered = points.map(p => {
       const rp = rotate(p.base);
       const pr = project(rp);
@@ -515,17 +457,15 @@
     }).sort((a, b) => a.rp.z - b.rp.z);
 
     rendered.forEach(({ p, rp, pr }) => {
-      if (rp.z < 0) return; // скрываем задние
+      if (rp.z < 0) return;
       const pulse = 0.6 + Math.abs(Math.sin(t * 0.002 + p.pulse)) * 0.4;
       const size = 2 + pulse * 2;
 
-      // halo
       ctx.fillStyle = `rgba(0,255,156,${0.15 * pulse})`;
       ctx.beginPath();
       ctx.arc(pr.x, pr.y, size * 3, 0, Math.PI * 2);
       ctx.fill();
 
-      // core
       ctx.fillStyle = '#00ff9c';
       ctx.shadowColor = '#00ff9c';
       ctx.shadowBlur = 10;
@@ -535,7 +475,6 @@
       ctx.shadowBlur = 0;
     });
 
-    // Трассировки
     for (let i = traces.length - 1; i >= 0; i--){
       const tr = traces[i];
       tr.progress += tr.speed;
@@ -543,18 +482,14 @@
 
       const a = rotate(tr.from.base);
       const b = rotate(tr.to.base);
-
-      // Обе точки должны быть на передней полусфере хотя бы частично
       const pa = project(a);
       const pb = project(b);
 
-      // Кривая Безье через центр (с подъёмом)
       const midX = (pa.x + pb.x) / 2;
       const midY = (pa.y + pb.y) / 2;
       const dx = pb.x - pa.x;
       const dy = pb.y - pa.y;
       const len = Math.hypot(dx, dy) || 1;
-      // перпендикуляр наружу от центра
       const nx = (midX - W / 2);
       const ny = (midY - H / 2);
       const nlen = Math.hypot(nx, ny) || 1;
@@ -567,8 +502,6 @@
         : 1;
 
       const color = tr.suspicious ? '255,42,109' : '0,255,156';
-
-      // Сама кривая — только до progress
       const seg = 40;
       const upto = Math.max(1, Math.floor(seg * Math.min(1, tr.progress + 0.15)));
 
@@ -583,7 +516,6 @@
       }
       ctx.stroke();
 
-      // Пакет
       const tt = Math.min(1, tr.progress);
       const px = (1 - tt) * (1 - tt) * pa.x + 2 * (1 - tt) * tt * cx1 + tt * tt * pb.x;
       const py = (1 - tt) * (1 - tt) * pa.y + 2 * (1 - tt) * tt * cy1 + tt * tt * pb.y;
@@ -596,7 +528,6 @@
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      // Мелкое свечение вокруг пакета
       ctx.fillStyle = `rgba(${color},${0.15 * alpha})`;
       ctx.beginPath();
       ctx.arc(px, py, 9, 0, Math.PI * 2);
@@ -605,19 +536,12 @@
       if (tr.life >= tr.maxLife) traces.splice(i, 1);
     }
 
-    // HUD lat/lon по центру
-    const center = rotate({x: 0, y: 0, z: 1});
     if (hudLat && hudLon){
-      const fakeLat = (-rotX * 180 / Math.PI).toFixed(4);
-      const fakeLon = ((rotY * 180 / Math.PI) % 360).toFixed(4);
-      hudLat.textContent = fakeLat;
-      hudLon.textContent = fakeLon;
+      hudLat.textContent = (-rotX * 180 / Math.PI).toFixed(4);
+      hudLon.textContent = ((rotY * 180 / Math.PI) % 360).toFixed(4);
     }
-
-    lastT = t;
   }
 
-  // Стартовые трассы
   setTimeout(spawnTrace, 500);
   setTimeout(spawnTrace, 1000);
 
