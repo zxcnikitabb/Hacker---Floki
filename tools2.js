@@ -140,6 +140,16 @@ function extLink(name, url, desc){
             if (desc) html += `  <span style="color:var(--dim)">${esc(desc)}</span>\n`;
           });
         }
+
+         // ---- external lookups ----
+html += `\n<span class="ok">> external lookups</span>\n`;
+html += extLink('Shodan',      `https://www.shodan.io/host/${ip}`,        'открытые порты');
+html += extLink('AbuseIPDB',   `https://www.abuseipdb.com/check/${ip}`,   'жалобы');
+html += extLink('VirusTotal',  `https://www.virustotal.com/gui/ip-address/${ip}`, 'репутация');
+html += extLink('BGP HE',      `https://bgp.he.net/ip/${ip}`,             'маршруты');
+html += extLink('RIPE',        `https://apps.db.ripe.net/db-web-ui/query?searchtext=${ip}`, 'RIPE база');
+html += extLink('RIPEstat',    `https://stat.ripe.net/${ip}`,             'статистика');
+
         html += `\n<span class="ok">> источник: rdap.org</span>`;
         out.innerHTML = html;
       } catch(e){
