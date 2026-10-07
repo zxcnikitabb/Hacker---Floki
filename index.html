@@ -94,30 +94,34 @@
 <section id="tools" class="tools">
   <h2 class="section-title">/<span> MODULES </span>/</h2>
   <div class="grid">
-    <div class="card">
-      <div class="card-icon">◉</div>
-      <h3>Recon</h3>
-      <p>Пассивная разведка, whois, DNS, subdomain enumeration.</p>
-      <span class="status">ACTIVE</span>
-    </div>
-    <div class="card">
-      <div class="card-icon">⌘</div>
-      <h3>Metadata</h3>
-      <p>Извлечение EXIF, геолокации и скрытых данных из файлов.</p>
-      <span class="status">ACTIVE</span>
-    </div>
-    <div class="card">
-      <div class="card-icon">⧉</div>
-      <h3>Social Graph</h3>
-      <p>Поиск по никнеймам, email и цифровым следам.</p>
-      <span class="status">ACTIVE</span>
-    </div>
-    <div class="card">
-      <div class="card-icon">⌬</div>
-      <h3>Network</h3>
-      <p>Анализ трафика, портов и открытых сервисов.</p>
-      <span class="status">STEALTH</span>
-    </div>
+    <div class="card tool-card" data-tool="recon">
+  <div class="card-icon">◉</div>
+  <h3>Recon</h3>
+  <p>DNS lookup, WHOIS через RDAP, reverse DNS. Работает без API-ключей.</p>
+  <span class="status">READY</span>
+  <span class="launch">▶ LAUNCH</span>
+</div>
+<div class="card tool-card" data-tool="metadata">
+  <div class="card-icon">⌘</div>
+  <h3>Metadata</h3>
+  <p>EXIF-анализ фото: камера, дата, GPS, софт. Файл обрабатывается локально.</p>
+  <span class="status">READY</span>
+  <span class="launch">▶ LAUNCH</span>
+</div>
+<div class="card tool-card" data-tool="social">
+  <div class="card-icon">⧉</div>
+  <h3>Social Graph</h3>
+  <p>Проверка username по популярным платформам: GitHub, Reddit, Instagram и др.</p>
+  <span class="status">READY</span>
+  <span class="launch">▶ LAUNCH</span>
+</div>
+<div class="card tool-card" data-tool="network">
+  <div class="card-icon">⌬</div>
+  <h3>Network</h3>
+  <p>Геолокация IP, ASN, ISP, timezone, VPN-детект. Работает без ключей.</p>
+  <span class="status">READY</span>
+  <span class="launch">▶ LAUNCH</span>
+</div>
   </div>
 </section>
 
