@@ -1,6 +1,6 @@
 /* =========================================================
    HACKER — FLOKI :: OSINT TOOLS v3
-   Username Sweep (пока только он)
+   Sweep / Domain / Reverse / IP Location / JWT / Dork
    ========================================================= */
 (() => {
   const modal = document.getElementById('toolModal');
@@ -12,12 +12,17 @@
     modal.hidden = false;
     document.body.style.overflow = 'hidden';
   }
+  function row(k, v){
+    return `<span class="key">${k}:</span> <span class="val">${String(v).replace(/</g,'&lt;')}</span>\n`;
+  }
   function esc(s){ return String(s).replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function extLink(name, url, desc){
     return `  <span class="key">·</span> <a class="val" href="${url}" target="_blank" rel="noopener" style="text-decoration:none">${name}</a> <span style="color:var(--dim);font-size:11px">— ${desc}</span>\n`;
   }
 
+  // =========================================================
   // USERNAME SWEEP
+  // =========================================================
   function toolSweep(){
     openModal('USERNAME SWEEP :: 20+ platforms');
 
@@ -151,707 +156,512 @@
       out.innerHTML = html;
     });
   }
-// DOMAIN INFO
-function toolDomain(){
-  openModal('DOMAIN INFO :: rdap + dns');
 
-  modalBody.innerHTML = `
-    <div class="tool-input-row">
-      <input id="domTarget" type="text" placeholder="example.com" autocomplete="off">
-      <button id="domRun">▶ ANALYZE</button>
-    </div>
-    <div id="domOut" class="tool-output">> введи домен для анализа</div>
-  `;
+  // =========================================================
+  // DOMAIN INFO
+  // =========================================================
+  function toolDomain(){
+    openModal('DOMAIN INFO :: rdap + dns');
 
-  const input = document.getElementById('domTarget');
-  const btn   = document.getElementById('domRun');
-  const out   = document.getElementById('domOut');
+    modalBody.innerHTML = `
+      <div class="tool-input-row">
+        <input id="domTarget" type="text" placeholder="example.com" autocomplete="off">
+        <button id="domRun">▶ ANALYZE</button>
+      </div>
+      <div id="domOut" class="tool-output">> введи домен для анализа</div>
+    `;
 
-  input.focus();
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+    const input = document.getElementById('domTarget');
+    const btn   = document.getElementById('domRun');
+    const out   = document.getElementById('domOut');
 
-  btn.addEventListener('click', async () => {
-    const domain = input.value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
-    if (!domain) return;
+    input.focus();
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
 
-    out.innerHTML = '<span class="tool-loading">> анализ домена</span>';
-    let html = `<span class="ok">> DOMAIN: ${esc(domain)}</span>\n\n`;
+    btn.addEventListener('click', async () => {
+      const domain = input.value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+      if (!domain) return;
 
-    try {
-      const r = await fetch(`https://rdap.org/domain/${encodeURIComponent(domain)}`);
-      if (r.ok){
-        const d = await r.json();
-        const events = d.events || [];
-        const reg = events.find(e => e.eventAction === 'registration');
-        const exp = events.find(e => e.eventAction === 'expiration');
-        const upd = events.find(e => e.eventAction === 'last changed');
+      out.innerHTML = '<span class="tool-loading">> анализ домена</span>';
+      let html = `<span class="ok">> DOMAIN: ${esc(domain)}</span>\n\n`;
 
-        if (reg){
-          const regDate = new Date(reg.eventDate);
-          const ageDays = Math.floor((Date.now() - regDate.getTime()) / 86400000);
-          const ageYears = (ageDays / 365).toFixed(1);
-          html += `<span class="key">  registered:</span> <span class="val">${reg.eventDate} (${ageDays} дней / ${ageYears} лет)</span>\n`;
-        }
-        if (exp){
-          const expDate = new Date(exp.eventDate);
-          const daysLeft = Math.floor((expDate.getTime() - Date.now()) / 86400000);
-          html += `<span class="key">  expires:</span> <span class="val">${exp.eventDate} (${daysLeft} дней)</span>\n`;
-        }
-        if (upd) html += `<span class="key">  updated:</span> <span class="val">${upd.eventDate}</span>\n`;
-        if (d.status) html += `<span class="key">  status:</span> <span class="val">${d.status.join(', ')}</span>\n`;
-
-        const registrar = (d.entities || []).find(e => (e.roles || []).includes('registrar'));
-        if (registrar && registrar.vcardArray){
-          const fn = registrar.vcardArray[1].find(v => v[0] === 'fn');
-          if (fn) html += `<span class="key">  registrar:</span> <span class="val">${esc(fn[3])}</span>\n`;
-        }
-
-        if (d.nameservers && d.nameservers.length){
-          html += '\n<span class="ok">> nameservers</span>\n';
-          d.nameservers.forEach(ns => html += `  <span class="val">${esc(ns.ldhName)}</span>\n`);
-        }
-      } else {
-        html += `<span class="err">> RDAP: не найдено (${r.status})</span>\n`;
-      }
-    } catch(e){
-      html += `<span class="err">> RDAP error: ${esc(e.message)}</span>\n`;
-    }
-
-    const dnsTypes = ['A','AAAA','MX','NS','TXT','CNAME'];
-    html += '\n<span class="ok">> DNS records</span>\n';
-    for (const t of dnsTypes){
       try {
-        const r = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${t}`);
-        const d = await r.json();
-        const answers = (d.Answer || []).map(a => a.data);
-        if (answers.length){
-          html += `  <span class="key">${t}:</span>\n`;
-          answers.slice(0, 5).forEach(a => html += `    <span class="val">${esc(a)}</span>\n`);
+        const r = await fetch(`https://rdap.org/domain/${encodeURIComponent(domain)}`);
+        if (r.ok){
+          const d = await r.json();
+          const events = d.events || [];
+          const reg = events.find(e => e.eventAction === 'registration');
+          const exp = events.find(e => e.eventAction === 'expiration');
+          const upd = events.find(e => e.eventAction === 'last changed');
+
+          if (reg){
+            const regDate = new Date(reg.eventDate);
+            const ageDays = Math.floor((Date.now() - regDate.getTime()) / 86400000);
+            const ageYears = (ageDays / 365).toFixed(1);
+            html += `<span class="key">  registered:</span> <span class="val">${reg.eventDate} (${ageDays} дней / ${ageYears} лет)</span>\n`;
+          }
+          if (exp){
+            const expDate = new Date(exp.eventDate);
+            const daysLeft = Math.floor((expDate.getTime() - Date.now()) / 86400000);
+            html += `<span class="key">  expires:</span> <span class="val">${exp.eventDate} (${daysLeft} дней)</span>\n`;
+          }
+          if (upd) html += `<span class="key">  updated:</span> <span class="val">${upd.eventDate}</span>\n`;
+          if (d.status) html += `<span class="key">  status:</span> <span class="val">${d.status.join(', ')}</span>\n`;
+
+          const registrar = (d.entities || []).find(e => (e.roles || []).includes('registrar'));
+          if (registrar && registrar.vcardArray){
+            const fn = registrar.vcardArray[1].find(v => v[0] === 'fn');
+            if (fn) html += `<span class="key">  registrar:</span> <span class="val">${esc(fn[3])}</span>\n`;
+          }
+
+          if (d.nameservers && d.nameservers.length){
+            html += '\n<span class="ok">> nameservers</span>\n';
+            d.nameservers.forEach(ns => html += `  <span class="val">${esc(ns.ldhName)}</span>\n`);
+          }
+        } else {
+          html += `<span class="err">> RDAP: не найдено (${r.status})</span>\n`;
         }
-      } catch(e){}
-    }
-
-    html += '\n<span class="ok">> external lookups</span>\n';
-    html += extLink('Whois',      `https://who.is/whois/${domain}`, 'классический whois');
-    html += extLink('crt.sh',     `https://crt.sh/?q=${domain}`, 'SSL сертификаты');
-    html += extLink('URLScan',    `https://urlscan.io/domain/${domain}`, 'сканы');
-    html += extLink('VirusTotal', `https://www.virustotal.com/gui/domain/${domain}`, 'репутация');
-    html += extLink('Wayback',    `https://web.archive.org/web/*/${domain}`, 'архив');
-    html += extLink('SecurityTrails', `https://securitytrails.com/domain/${domain}/dns`, 'история DNS');
-
-    out.innerHTML = html;
-  });
-}
-// REVERSE IMAGE
-function toolReverse(){
-  openModal('REVERSE IMAGE :: search');
-
-  modalBody.innerHTML = `
-    <div class="tool-input-row">
-      <input id="imgUrl" type="url" placeholder="https://example.com/image.jpg" autocomplete="off">
-      <button id="imgRun">▶ SEARCH</button>
-    </div>
-    <div id="imgPreview" style="margin-bottom:16px"></div>
-    <div id="imgOut" class="tool-output">> введи URL картинки</div>
-  `;
-
-  const input   = document.getElementById('imgUrl');
-  const btn     = document.getElementById('imgRun');
-  const out     = document.getElementById('imgOut');
-  const preview = document.getElementById('imgPreview');
-
-  input.focus();
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
-
-  btn.addEventListener('click', () => {
-    const url = input.value.trim();
-    if (!url) return;
-
-    preview.innerHTML = `<img src="${esc(url)}" style="max-width:100%;max-height:200px;border:1px solid rgba(0,255,156,.3);border-radius:6px" onerror="this.style.display='none'">`;
-
-    const encoded = encodeURIComponent(url);
-    let html = `<span class="ok">> IMAGE: ${esc(url)}</span>\n\n`;
-    html += `<span class="ok">> поиск по картинке</span>\n`;
-    html += extLink('Google Lens',   `https://lens.google.com/uploadbyurl?url=${encoded}`, 'самый точный');
-    html += extLink('Yandex Images', `https://yandex.com/images/search?rpt=imageview&url=${encoded}`, 'лучший для СНГ');
-    html += extLink('TinEye',        `https://tineye.com/search?url=${encoded}`, 'поиск дубликатов');
-    html += extLink('Bing Visual',   `https://www.bing.com/images/search?view=detailv2&iss=sbi&form=SBIVSP&sbisrc=UrlPaste&q=imgurl:${encoded}`, 'Bing');
-    html += extLink('SauceNAO',      `https://saucenao.com/search.php?url=${encoded}`, 'аниме/арт');
-    html += extLink('Karma Decay',   `https://karmadecay.com/search?q=${encoded}`, 'Reddit');
-    html += extLink('PimEyes',       `https://pimeyes.com/en`, 'поиск по лицу (вставить вручную)');
-    html += `\n<span style="color:var(--dim)">> тапни сервис — откроется в новой вкладке</span>`;
-
-    out.innerHTML = html;
-  });
-}
-// IP LOCATION
-function toolIpLoc(){
-  openModal('IP LOCATION :: geo');
-
-  modalBody.innerHTML = `
-    <div class="tool-input-row">
-      <input id="iplTarget" type="text" placeholder="8.8.8.8 или пусто = мой IP" autocomplete="off">
-      <button id="iplRun">▶ LOCATE</button>
-    </div>
-    <div id="iplOut" class="tool-output">> введи IP</div>
-  `;
-
-  const input = document.getElementById('iplTarget');
-  const btn   = document.getElementById('iplRun');
-  const out   = document.getElementById('iplOut');
-
-  input.focus();
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
-
-  btn.addEventListener('click', async () => {
-    const ip = input.value.trim();
-    out.innerHTML = '<span class="tool-loading">> получение локации</span>';
-
-    try {
-      const url = ip ? `https://ipwho.is/${encodeURIComponent(ip)}` : 'https://ipwho.is/';
-      const r = await fetch(url);
-      const d = await r.json();
-
-      if (!d.success){
-        out.innerHTML = `<span class="err">> ${esc(d.message || 'не удалось')}</span>`;
-        return;
+      } catch(e){
+        html += `<span class="err">> RDAP error: ${esc(e.message)}</span>\n`;
       }
 
-      const flag = d.country_code
-        ? `<img src="https://flagcdn.com/w40/${d.country_code.toLowerCase()}.png" style="vertical-align:middle;margin-left:6px;border:1px solid rgba(0,255,156,.3)">`
-        : '';
-
-      let html = `<span class="ok">> IP: ${esc(d.ip)} ${flag}</span>\n\n`;
-      html += `<span class="key">  country:</span> <span class="val">${esc(d.country)} (${esc(d.country_code)})</span>\n`;
-      html += `<span class="key">  region:</span> <span class="val">${esc(d.region || '—')}</span>\n`;
-      html += `<span class="key">  city:</span> <span class="val">${esc(d.city || '—')}</span>\n`;
-      html += `<span class="key">  postal:</span> <span class="val">${esc(d.postal || '—')}</span>\n`;
-      html += `<span class="key">  lat:</span> <span class="val">${d.latitude}</span>\n`;
-      html += `<span class="key">  lon:</span> <span class="val">${d.longitude}</span>\n`;
-      html += `<span class="key">  timezone:</span> <span class="val">${esc(d.timezone?.id || '—')}</span>\n`;
-      html += `<span class="key">  ASN:</span> <span class="val">${esc(d.connection?.asn || '—')}</span>\n`;
-      html += `<span class="key">  ISP:</span> <span class="val">${esc(d.connection?.isp || '—')}</span>\n`;
-
-      if (d.latitude && d.longitude){
-        const mapUrl = `https://www.openstreetmap.org/?mlat=${d.latitude}&mlon=${d.longitude}#map=10/${d.latitude}/${d.longitude}`;
-        const gmapUrl = `https://www.google.com/maps?q=${d.latitude},${d.longitude}`;
-        html += `\n<span class="ok">> карта</span>\n`;
-        html += `  <span class="key">·</span> <a class="val" href="${mapUrl}" target="_blank" rel="noopener" style="text-decoration:none">OpenStreetMap</a>\n`;
-        html += `  <span class="key">·</span> <a class="val" href="${gmapUrl}" target="_blank" rel="noopener" style="text-decoration:none">Google Maps</a>\n`;
-
-        const staticMap = `https://staticmap.openstreetmap.de/staticmap.php?center=${d.latitude},${d.longitude}&zoom=8&size=600x300&maptype=mapnik&markers=${d.latitude},${d.longitude},red-pushpin`;
-        html += `\n<img src="${staticMap}" style="width:100%;max-width:600px;border:1px solid rgba(0,255,156,.3);border-radius:6px;margin-top:10px" onerror="this.style.display='none'">\n`;
+      const dnsTypes = ['A','AAAA','MX','NS','TXT','CNAME'];
+      html += '\n<span class="ok">> DNS records</span>\n';
+      for (const t of dnsTypes){
+        try {
+          const r = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${t}`);
+          const d = await r.json();
+          const answers = (d.Answer || []).map(a => a.data);
+          if (answers.length){
+            html += `  <span class="key">${t}:</span>\n`;
+            answers.slice(0, 5).forEach(a => html += `    <span class="val">${esc(a)}</span>\n`);
+          }
+        } catch(e){}
       }
+
+      html += '\n<span class="ok">> external lookups</span>\n';
+      html += extLink('Whois',      `https://who.is/whois/${domain}`, 'классический whois');
+      html += extLink('crt.sh',     `https://crt.sh/?q=${domain}`, 'SSL сертификаты');
+      html += extLink('URLScan',    `https://urlscan.io/domain/${domain}`, 'сканы');
+      html += extLink('VirusTotal', `https://www.virustotal.com/gui/domain/${domain}`, 'репутация');
+      html += extLink('Wayback',    `https://web.archive.org/web/*/${domain}`, 'архив');
+      html += extLink('SecurityTrails', `https://securitytrails.com/domain/${domain}/dns`, 'история DNS');
 
       out.innerHTML = html;
-    } catch(e){
-      out.innerHTML = `<span class="err">> error: ${esc(e.message)}</span>`;
-    }
-  });
-}
-// JWT / BASE64 DECODER
-function toolJwt(){
-  openModal('JWT / BASE64 :: decoder');
-
-  modalBody.innerHTML = `
-    <div class="tool-input-row">
-      <input id="jwtInput" type="text" placeholder="JWT или Base64 строка" autocomplete="off">
-      <button id="jwtRun">▶ DECODE</button>
-    </div>
-    <div id="jwtOut" class="tool-output">> вставь JWT или Base64</div>
-  `;
-
-  const input = document.getElementById('jwtInput');
-  const btn   = document.getElementById('jwtRun');
-  const out   = document.getElementById('jwtOut');
-
-  input.focus();
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
-
-  // base64url → base64
-  function b64urlToB64(s){
-    s = s.replace(/-/g, '+').replace(/_/g, '/');
-    while (s.length % 4) s += '=';
-    return s;
+    });
   }
 
-  function decodeB64(s){
-    try {
-      const bin = atob(b64urlToB64(s));
-      // UTF-8 fix
-      return decodeURIComponent(escape(bin));
-    } catch(e){
-      try { return atob(b64urlToB64(s)); } catch(_){ return null; }
-    }
-  }
+  // =========================================================
+  // REVERSE IMAGE
+  // =========================================================
+  function toolReverse(){
+    openModal('REVERSE IMAGE :: search');
 
-  function prettyJson(str){
-    try {
-      const obj = JSON.parse(str);
-      return JSON.stringify(obj, null, 2);
-    } catch(_){ return str; }
-  }
+    modalBody.innerHTML = `
+      <div class="tool-input-row">
+        <input id="imgUrl" type="url" placeholder="https://example.com/image.jpg" autocomplete="off">
+        <button id="imgRun">▶ SEARCH</button>
+      </div>
+      <div id="imgPreview" style="margin-bottom:16px"></div>
+      <div id="imgOut" class="tool-output">> введи URL картинки</div>
+    `;
 
-  btn.addEventListener('click', () => {
-    const raw = input.value.trim();
-    if (!raw) return;
+    const input   = document.getElementById('imgUrl');
+    const btn     = document.getElementById('imgRun');
+    const out     = document.getElementById('imgOut');
+    const preview = document.getElementById('imgPreview');
 
-    let html = '';
-    const parts = raw.split('.');
+    input.focus();
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
 
-    // === JWT? (3 части, base64url) ===
-    if (parts.length === 3 && parts.every(p => /^[A-Za-z0-9_\-]+$/.test(p))){
-      html += `<span class="ok">> JWT DETECTED</span>\n\n`;
+    btn.addEventListener('click', () => {
+      const url = input.value.trim();
+      if (!url) return;
 
-      const header  = decodeB64(parts[0]);
-      const payload = decodeB64(parts[1]);
-      const sig     = parts[2];
+      preview.innerHTML = `<img src="${esc(url)}" style="max-width:100%;max-height:200px;border:1px solid rgba(0,255,156,.3);border-radius:6px" onerror="this.style.display='none'">`;
 
-      if (!header || !payload){
-        html += `<span class="err">> не удалось раскодировать JWT</span>`;
-        out.innerHTML = html;
-        return;
-      }
-
-      // header
-      html += `<span class="ok">> HEADER</span>\n`;
-      html += `<span class="val">${esc(prettyJson(header))}</span>\n\n`;
-
-      // payload
-      html += `<span class="ok">> PAYLOAD</span>\n`;
-      html += `<span class="val">${esc(prettyJson(payload))}</span>\n\n`;
-
-      // signature
-      html += `<span class="ok">> SIGNATURE</span>\n`;
-      html += `<span style="color:var(--dim)">${esc(sig)} (не раскодируется — это хеш)</span>\n\n`;
-
-      // доп. анализ
-      html += `<span class="ok">> ANALYSIS</span>\n`;
-      try {
-        const h = JSON.parse(header);
-        const p = JSON.parse(payload);
-
-        if (h.alg) html += `<span class="key">  algorithm:</span> <span class="val">${esc(h.alg)}</span>\n`;
-        if (h.typ) html += `<span class="key">  type:</span> <span class="val">${esc(h.typ)}</span>\n`;
-
-        if (h.alg === 'none'){
-          html += `<span class="err">  ⚠️ ALGORITHM NONE — токен не подписан! Уязвимость.</span>\n`;
-        }
-
-        if (p.exp){
-          const expDate = new Date(p.exp * 1000);
-          const now = new Date();
-          const expired = expDate < now;
-          html += `<span class="key">  expires:</span> <span class="val">${expDate.toLocaleString('ru-RU')}</span>`;
-          html += expired
-            ? ` <span class="err">[ИСТЁК]</span>\n`
-            : ` <span class="ok">[активен]</span>\n`;
-        }
-        if (p.iat){
-          html += `<span class="key">  issued at:</span> <span class="val">${new Date(p.iat * 1000).toLocaleString('ru-RU')}</span>\n`;
-        }
-        if (p.nbf){
-          html += `<span class="key">  not before:</span> <span class="val">${new Date(p.nbf * 1000).toLocaleString('ru-RU')}</span>\n`;
-        }
-        if (p.iss)  html += `<span class="key">  issuer:</span> <span class="val">${esc(p.iss)}</span>\n`;
-        if (p.sub)  html += `<span class="key">  subject:</span> <span class="val">${esc(p.sub)}</span>\n`;
-        if (p.aud)  html += `<span class="key">  audience:</span> <span class="val">${esc(JSON.stringify(p.aud))}</span>\n`;
-      } catch(_){}
-
-      html += `\n<span class="ok">> external</span>\n`;
-      html += extLink('jwt.io', `https://jwt.io/#debugger-io?token=${encodeURIComponent(raw)}`, 'онлайн-дебаггер');
+      const encoded = encodeURIComponent(url);
+      let html = `<span class="ok">> IMAGE: ${esc(url)}</span>\n\n`;
+      html += `<span class="ok">> поиск по картинке</span>\n`;
+      html += extLink('Google Lens',   `https://lens.google.com/uploadbyurl?url=${encoded}`, 'самый точный');
+      html += extLink('Yandex Images', `https://yandex.com/images/search?rpt=imageview&url=${encoded}`, 'лучший для СНГ');
+      html += extLink('TinEye',        `https://tineye.com/search?url=${encoded}`, 'поиск дубликатов');
+      html += extLink('Bing Visual',   `https://www.bing.com/images/search?view=detailv2&iss=sbi&form=SBIVSP&sbisrc=UrlPaste&q=imgurl:${encoded}`, 'Bing');
+      html += extLink('SauceNAO',      `https://saucenao.com/search.php?url=${encoded}`, 'аниме/арт');
+      html += extLink('Karma Decay',   `https://karmadecay.com/search?q=${encoded}`, 'Reddit');
+      html += extLink('PimEyes',       `https://pimeyes.com/en`, 'поиск по лицу (вставить вручную)');
+      html += `\n<span style="color:var(--dim)">> тапни сервис — откроется в новой вкладке</span>`;
 
       out.innerHTML = html;
-      return;
-    }
-
-    // === Просто Base64 / Base64url ===
-    if (/^[A-Za-z0-9+/=_\-\s]+$/.test(raw)){
-      const decoded = decodeB64(raw.replace(/\s/g, ''));
-      if (decoded !== null){
-        html += `<span class="ok">> BASE64 DETECTED</span>\n\n`;
-        html += `<span class="key">  length:</span> <span class="val">${raw.length} chars</span>\n`;
-        html += `<span class="key">  type:</span> <span class="val">${/[_-]/.test(raw) ? 'base64url' : 'base64'}</span>\n\n`;
-        html += `<span class="ok">> DECODED</span>\n`;
-        html += `<span class="val">${esc(decoded)}</span>\n\n`;
-
-        // если это JSON — красиво
-        const pretty = prettyJson(decoded);
-        if (pretty !== decoded){
-          html += `<span class="ok">> AS JSON</span>\n`;
-          html += `<span class="val">${esc(pretty)}</span>\n`;
-        }
-
-        out.innerHTML = html;
-        return;
-      }
-    }
-
-    // === HEX ===
-    if (/^[0-9a-fA-F\s]+$/.test(raw) && raw.replace(/\s/g,'').length % 2 === 0){
-      try {
-        const hex = raw.replace(/\s/g,'');
-        let str = '';
-        for (let i = 0; i < hex.length; i += 2){
-          str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
-        }
-        const utf8 = decodeURIComponent(escape(str));
-        html += `<span class="ok">> HEX DETECTED</span>\n\n`;
-        html += `<span class="ok">> DECODED</span>\n`;
-        html += `<span class="val">${esc(utf8)}</span>\n`;
-        out.innerHTML = html;
-        return;
-      } catch(_){}
-    }
-
-    // === URL-encoded ===
-    if (/%[0-9a-fA-F]{2}/.test(raw)){
-      try {
-        const decoded = decodeURIComponent(raw);
-        html += `<span class="ok">> URL-ENCODED DETECTED</span>\n\n`;
-        html += `<span class="ok">> DECODED</span>\n`;
-        html += `<span class="val">${esc(decoded)}</span>\n`;
-        out.innerHTML = html;
-        return;
-      } catch(_){}
-    }
-
-    // Не распознали
-    html += `<span class="err">> не удалось определить формат</span>\n\n`;
-    html += `<span class="key">поддерживаются:</span>\n`;
-    html += `  · JWT (три части через точку)\n`;
-    html += `  · Base64 / Base64url\n`;
-    html += `  · Hex (чётное кол-во символов 0-9,a-f)\n`;
-    html += `  · URL-encoded (%XX)\n`;
-    out.innerHTML = html;
-  });
-}
-// GOOGLE DORK BUILDER
-function toolDork(){
-  openModal('GOOGLE DORK :: builder');
-
-  modalBody.innerHTML = `
-    <div style="margin-bottom:16px">
-      <div style="color:var(--dim);font-size:12px;letter-spacing:1px;margin-bottom:10px">> выбери dork-шаблон:</div>
-      <div id="dorkList" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;padding-right:6px"></div>
-    </div>
-    <div class="tool-input-row">
-      <input id="dorkTarget" type="text" placeholder="example.com или ключевое слово" autocomplete="off">
-      <button id="dorkBuild">▶ BUILD</button>
-    </div>
-    <div id="dorkOut" class="tool-output">> введи домен и выбери шаблон</div>
-  `;
-
-  // Шаблоны dork-запросов
-  const dorks = [
-    { name:'🔓 Open Directories',      d:'site:{target} intitle:"index of"' },
-    { name:'📄 PDF Documents',         d:'site:{target} filetype:pdf' },
-    { name:'📊 Excel Files',           d:'site:{target} filetype:xls OR filetype:xlsx' },
-    { name:'📝 Word Documents',        d:'site:{target} filetype:doc OR filetype:docx' },
-    { name:'🗄 Database Dumps',        d:'site:{target} filetype:sql OR filetype:db' },
-    { name:'⚙️ Config Files',          d:'site:{target} filetype:env OR filetype:config OR filetype:cfg' },
-    { name:'🔑 Passwords',             d:'site:{target} intext:"password" filetype:txt' },
-    { name:'🔐 Login Pages',           d:'site:{target} inurl:login OR inurl:admin OR inurl:signin' },
-    { name:'📷 Open Webcams',          d:'inurl:"/view/index.shtml" OR intitle:"Live View / - AXIS"' },
-    { name:'🚪 phpMyAdmin',            d:'site:{target} intitle:phpMyAdmin' },
-    { name:'🗂 Git Repos',             d:'site:{target} inurl:".git" OR intitle:"Index of /.git"' },
-    { name:'📡 Admin Panels',          d:'site:{target} intitle:"admin panel" OR inurl:admin' },
-    { name:'🔍 Directory Listing',     d:'site:{target} intitle:"Index of /"' },
-    { name:'💾 Backups',               d:'site:{target} filetype:bak OR filetype:backup OR filetype:old' },
-    { name:'📧 Emails',                d:'site:{target} "@{target}"' },
-    { name:'🌐 Subdomains',            d:'site:*.{target}' },
-    { name:'🔗 API Endpoints',         d:'site:{target} inurl:api' },
-    { name:'📁 Sensitive Files',       d:'site:{target} filetype:log OR filetype:txt' },
-    { name:'🗝 SSH Keys',              d:'site:{target} filetype:pem OR filetype:key' },
-    { name:'🧪 Test/Staging',          d:'site:{target} inurl:test OR inurl:staging OR inurl:dev' },
-  ];
-
-  const listEl = document.getElementById('dorkList');
-  const input  = document.getElementById('dorkTarget');
-  const btn    = document.getElementById('dorkBuild');
-  const out    = document.getElementById('dorkOut');
-
-  // Отрисовка списка dork'ов
-  dorks.forEach((dk, i) => {
-    const item = document.createElement('div');
-    item.className = 'social-item';
-    item.style.cursor = 'none';
-    item.style.padding = '8px 12px';
-    item.dataset.idx = i;
-    item.innerHTML = `<span style="flex:1">${esc(dk.name)}</span><span style="font-size:10px;color:var(--dim)">CLICK</span>`;
-    item.addEventListener('click', () => {
-      // Снимаем выделение с других
-      listEl.querySelectorAll('.social-item').forEach(x => x.classList.remove('found'));
-      item.classList.add('found');
-      listEl.dataset.selected = i;
     });
-    listEl.appendChild(item);
-  });
-
-  input.focus();
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
-
-  btn.addEventListener('click', () => {
-    const target = input.value.trim();
-    const selIdx = listEl.dataset.selected;
-
-    if (selIdx === undefined){
-      out.innerHTML = `<span class="err">> сначала выбери шаблон выше</span>`;
-      return;
-    }
-    if (!target){
-      out.innerHTML = `<span class="err">> введи домен или ключевое слово</span>`;
-      return;
-    }
-
-    const dork = dorks[+selIdx];
-    const query = dork.d.replace(/\{target\}/g, target);
-    const encoded = encodeURIComponent(query);
-
-    let html = `<span class="ok">> ${esc(dork.name)}</span>\n\n`;
-    html += `<span class="key">  target:</span> <span class="val">${esc(target)}</span>\n`;
-    html += `<span class="key">  dork:</span>\n`;
-    html += `<span class="val">${esc(query)}</span>\n\n`;
-
-    html += `<span class="ok">> открыть в поисковиках</span>\n`;
-    html += extLink('Google',     `https://www.google.com/search?q=${encoded}`, 'основной');
-    html += extLink('Bing',       `https://www.bing.com/search?q=${encoded}`, 'альтернатива');
-    html += extLink('DuckDuckGo', `https://duckduckgo.com/?q=${encoded}`, 'без слежки');
-    html += extLink('Yandex',     `https://yandex.com/search/?text=${encoded}`, 'для СНГ');
-
-    html += `\n<span class="ok">> quick actions</span>\n`;
-    html += `  <span class="key">·</span> <a class="val" href="javascript:void(0)" id="copyDork" style="text-decoration:none">Скопировать dork</a> <span style="color:var(--dim);font-size:11px">— в буфер обмена</span>\n`;
-    html += `  <span class="key">·</span> <a class="val" href="javascript:void(0)" id="copyQuery" style="text-decoration:none">Скопировать query</a> <span style="color:var(--dim);font-size:11px">— без URL-кодирования</span>\n`;
-
-    html += `\n<span style="color:var(--dim);font-size:11px">⚠️ Используй легально. Dorking по чужим сайтам без разрешения — нарушение закона.</span>`;
-
-    out.innerHTML = html;
-
-    // Кнопки копирования
-    document.getElementById('copyDork')?.addEventListener('click', () => {
-      navigator.clipboard?.writeText(query).then(() => {
-        const el = document.getElementById('copyDork');
-        if (el) el.textContent = 'Скопировано ✓';
-      });
-    });
-    document.getElementById('copyQuery')?.addEventListener('click', () => {
-      navigator.clipboard?.writeText(encoded).then(() => {
-        const el = document.getElementById('copyQuery');
-        if (el) el.textContent = 'Скопировано ✓';
-      });
-    });
-  });
-}
-// GEOINT :: универсальный геопространственный анализ
-function toolGeo(){
-  openModal('GEOINT :: geo analysis');
-
-  modalBody.innerHTML = `
-    <div class="tool-input-row">
-      <input id="geoInput" type="text" placeholder="55.7558, 37.6173 или адрес" autocomplete="off">
-      <button id="geoRun">▶ ANALYZE</button>
-    </div>
-    <div class="geo-hint-input">
-      > поддерживается: координаты · адрес · Plus Code · ссылка Google/OSM
-    </div>
-    <div id="geoOut" class="tool-output" style="margin-top:14px">> введи координаты или адрес</div>
-  `;
-
-  const input = document.getElementById('geoInput');
-  const btn   = document.getElementById('geoRun');
-  const out   = document.getElementById('geoOut');
-
-  input.focus();
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
-
-  function parseCoords(str){
-    const m = str.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
-    if (m) return { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
-    const g = str.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-    if (g) return { lat: parseFloat(g[1]), lon: parseFloat(g[2]) };
-    const o = str.match(/map=\d+\/(-?\d+\.?\d*)\/(-?\d+\.?\d*)/);
-    if (o) return { lat: parseFloat(o[1]), lon: parseFloat(o[2]) };
-    return null;
   }
 
-  async function reverseGeocode(lat, lon){
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ru`;
-    const r = await fetch(url, { headers: { 'User-Agent': 'HACKER-FLOKI-OSINT' } });
-    return r.json();
-  }
+  // =========================================================
+  // IP LOCATION
+  // =========================================================
+  function toolIpLoc(){
+    openModal('IP LOCATION :: geo');
 
-  async function forwardGeocode(q){
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=ru`;
-    const r = await fetch(url, { headers: { 'User-Agent': 'HACKER-FLOKI-OSINT' } });
-    return r.json();
-  }
+    modalBody.innerHTML = `
+      <div class="tool-input-row">
+        <input id="iplTarget" type="text" placeholder="8.8.8.8 или пусто = мой IP" autocomplete="off">
+        <button id="iplRun">▶ LOCATE</button>
+      </div>
+      <div id="iplOut" class="tool-output">> введи IP</div>
+    `;
 
-  async function getElevation(lat, lon){
-    try {
-      const r = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
-      const d = await r.json();
-      return d.results?.[0]?.elevation ?? '—';
-    } catch(_){ return '—'; }
-  }
+    const input = document.getElementById('iplTarget');
+    const btn   = document.getElementById('iplRun');
+    const out   = document.getElementById('iplOut');
 
-  async function getWeather(lat, lon){
-    try {
-      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`);
-      const d = await r.json();
-      const c = d.current || {};
-      const code = c.weather_code;
-      const desc = {0:'ясно',1:'преим. ясно',2:'перем. облачно',3:'облачно',45:'туман',48:'изморозь',51:'морось',61:'дождь',63:'дождь',65:'ливень',71:'снег',73:'снег',75:'снегопад',80:'ливни',95:'гроза',96:'гроза с градом'}[code] || '—';
-      return `${c.temperature_2m}°C, ${desc}`;
-    } catch(_){ return '—'; }
-  }
+    input.focus();
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
 
-  async function getNearby(lat, lon){
-    try {
-      const q = `[out:json][timeout:20];(node(around:300,${lat},${lon})[amenity];way(around:300,${lat},${lon})[amenity];);out center 15;`;
-      const r = await fetch('https://overpass-api.de/api/interpreter', { method:'POST', body:'data=' + encodeURIComponent(q) });
-      const d = await r.json();
-      return (d.elements || []).slice(0, 10).map(el => ({ name: el.tags?.name || '(без имени)', type: el.tags?.amenity || 'объект' }));
-    } catch(_){ return []; }
-  }
+    btn.addEventListener('click', async () => {
+      const ip = input.value.trim();
+      out.innerHTML = '<span class="tool-loading">> получение локации</span>';
 
-  function toDMS(deg, type){
-    const d = Math.abs(deg);
-    const degrees = Math.floor(d);
-    const minFloat = (d - degrees) * 60;
-    const minutes = Math.floor(minFloat);
-    const seconds = ((minFloat - minutes) * 60).toFixed(2);
-    const dir = type === 'lat' ? (deg >= 0 ? 'N' : 'S') : (deg >= 0 ? 'E' : 'W');
-    return `${degrees}°${minutes}'${seconds}"${dir}`;
-  }
-
-  btn.addEventListener('click', async () => {
-    const raw = input.value.trim();
-    if (!raw) return;
-
-    out.innerHTML = '<span class="tool-loading">> анализ</span>';
-
-    let lat, lon, addressData = null;
-    const coords = parseCoords(raw);
-
-    if (coords){
-      lat = coords.lat;
-      lon = coords.lon;
-    } else {
       try {
-        const results = await forwardGeocode(raw);
-        if (!results.length){
-          out.innerHTML = `<span class="err">> адрес не найден</span>`;
+        const url = ip ? `https://ipwho.is/${encodeURIComponent(ip)}` : 'https://ipwho.is/';
+        const r = await fetch(url);
+        const d = await r.json();
+
+        if (!d.success){
+          out.innerHTML = `<span class="err">> ${esc(d.message || 'не удалось')}</span>`;
           return;
         }
-        lat = parseFloat(results[0].lat);
-        lon = parseFloat(results[0].lon);
-        addressData = results[0];
+
+        const flag = d.country_code
+          ? `<img src="https://flagcdn.com/w40/${d.country_code.toLowerCase()}.png" style="vertical-align:middle;margin-left:6px;border:1px solid rgba(0,255,156,.3)">`
+          : '';
+
+        let html = `<span class="ok">> IP: ${esc(d.ip)} ${flag}</span>\n\n`;
+        html += row('  country',   `${d.country} (${d.country_code})`);
+        html += row('  region',    d.region || '—');
+        html += row('  city',      d.city || '—');
+        html += row('  postal',    d.postal || '—');
+        html += row('  lat',       d.latitude);
+        html += row('  lon',       d.longitude);
+        html += row('  timezone',  d.timezone?.id || '—');
+        html += row('  ASN',       d.connection?.asn || '—');
+        html += row('  ISP',       d.connection?.isp || '—');
+
+        if (d.latitude && d.longitude){
+          const mapUrl = `https://www.openstreetmap.org/?mlat=${d.latitude}&mlon=${d.longitude}#map=10/${d.latitude}/${d.longitude}`;
+          const gmapUrl = `https://www.google.com/maps?q=${d.latitude},${d.longitude}`;
+          html += `\n<span class="ok">> карта</span>\n`;
+          html += `  <span class="key">·</span> <a class="val" href="${mapUrl}" target="_blank" rel="noopener" style="text-decoration:none">OpenStreetMap</a>\n`;
+          html += `  <span class="key">·</span> <a class="val" href="${gmapUrl}" target="_blank" rel="noopener" style="text-decoration:none">Google Maps</a>\n`;
+
+          const staticMap = `https://staticmap.openstreetmap.de/staticmap.php?center=${d.latitude},${d.longitude}&zoom=8&size=600x300&maptype=mapnik&markers=${d.latitude},${d.longitude},red-pushpin`;
+          html += `\n<img src="${staticMap}" style="width:100%;max-width:600px;border:1px solid rgba(0,255,156,.3);border-radius:6px;margin-top:10px" onerror="this.style.display='none'">\n`;
+        }
+
+        out.innerHTML = html;
       } catch(e){
-        out.innerHTML = `<span class="err">> ошибка геокодинга</span>`;
-        return;
+        out.innerHTML = `<span class="err">> error: ${esc(e.message)}</span>`;
+      }
+    });
+  }
+
+  // =========================================================
+  // JWT / BASE64 DECODER
+  // =========================================================
+  function toolJwt(){
+    openModal('JWT / BASE64 :: decoder');
+
+    modalBody.innerHTML = `
+      <div class="tool-input-row">
+        <input id="jwtInput" type="text" placeholder="JWT или Base64 строка" autocomplete="off">
+        <button id="jwtRun">▶ DECODE</button>
+      </div>
+      <div id="jwtOut" class="tool-output">> вставь JWT или Base64</div>
+    `;
+
+    const input = document.getElementById('jwtInput');
+    const btn   = document.getElementById('jwtRun');
+    const out   = document.getElementById('jwtOut');
+
+    input.focus();
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+
+    function b64urlToB64(s){
+      s = s.replace(/-/g, '+').replace(/_/g, '/');
+      while (s.length % 4) s += '=';
+      return s;
+    }
+
+    function decodeB64(s){
+      try {
+        const bin = atob(b64urlToB64(s));
+        return decodeURIComponent(escape(bin));
+      } catch(e){
+        try { return atob(b64urlToB64(s)); } catch(_){ return null; }
       }
     }
 
-    if (!lat || !lon || isNaN(lat) || isNaN(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180){
-      out.innerHTML = `<span class="err">> некорректные координаты</span>`;
-      return;
+    function prettyJson(str){
+      try {
+        const obj = JSON.parse(str);
+        return JSON.stringify(obj, null, 2);
+      } catch(_){ return str; }
     }
 
-    const [addr, elev, weather, nearby] = await Promise.all([
-      addressData ? Promise.resolve({ display_name: addressData.display_name, address: addressData.address }) : reverseGeocode(lat, lon).catch(()=>null),
-      getElevation(lat, lon),
-      getWeather(lat, lon),
-      getNearby(lat, lon)
-    ]);
+    btn.addEventListener('click', () => {
+      const raw = input.value.trim();
+      if (!raw) return;
 
-    const latFixed = lat.toFixed(6);
-    const lonFixed = lon.toFixed(6);
-    const coordStr = `${latFixed}, ${lonFixed}`;
+      let html = '';
+      const parts = raw.split('.');
 
-    let html = `<div class="geo-result">`;
+      // JWT
+      if (parts.length === 3 && parts.every(p => /^[A-Za-z0-9_\-]+$/.test(p))){
+        html += `<span class="ok">> JWT DETECTED</span>\n\n`;
 
-    html += `<div class="geo-block">
-      <div class="geo-block-title">📍 coordinates</div>
-      <div class="geo-row"><span class="k">latitude:</span><span class="v">${latFixed}</span></div>
-      <div class="geo-row"><span class="k">longitude:</span><span class="v">${lonFixed}</span></div>
-      <div class="geo-row"><span class="k">DMS:</span><span class="v">${toDMS(lat, 'lat')} ${toDMS(lon, 'lon')}</span></div>
-      <div class="geo-actions"><button id="geoCopy">📋 Скопировать</button></div>
-    </div>`;
+        const header  = decodeB64(parts[0]);
+        const payload = decodeB64(parts[1]);
+        const sig     = parts[2];
 
-    if (addr){
-      const a = addr.address || {};
-      html += `<div class="geo-block">
-        <div class="geo-block-title">🌍 address</div>
-        ${addr.display_name ? `<div class="geo-row"><span class="k">full:</span><span class="v">${esc(addr.display_name)}</span></div>` : ''}
-        ${a.country ? `<div class="geo-row"><span class="k">country:</span><span class="v">${esc(a.country)}</span></div>` : ''}
-        ${a.state ? `<div class="geo-row"><span class="k">region:</span><span class="v">${esc(a.state)}</span></div>` : ''}
-        ${a.city || a.town || a.village ? `<div class="geo-row"><span class="k">city:</span><span class="v">${esc(a.city || a.town || a.village)}</span></div>` : ''}
-        ${a.postcode ? `<div class="geo-row"><span class="k">postcode:</span><span class="v">${esc(a.postcode)}</span></div>` : ''}
-      </div>`;
-    }
+        if (!header || !payload){
+          html += `<span class="err">> не удалось раскодировать JWT</span>`;
+          out.innerHTML = html;
+          return;
+        }
 
-    html += `<div class="geo-block">
-      <div class="geo-block-title">⛰️ nature</div>
-      <div class="geo-row"><span class="k">elevation:</span><span class="v">${elev} м</span></div>
-      <div class="geo-row"><span class="k">weather:</span><span class="v">${esc(weather)}</span></div>
-    </div>`;
+        html += `<span class="ok">> HEADER</span>\n`;
+        html += `<span class="val">${esc(prettyJson(header))}</span>\n\n`;
 
-    const satUrl = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${lon-0.003},${lat-0.002},${lon+0.003},${lat+0.002}&bboxSR=4326&imageSR=4326&size=600,400&f=image&format=png`;
-    html += `<div class="geo-block">
-      <div class="geo-block-title">🛰️ satellite view</div>
-      <img class="geo-image" src="${satUrl}" alt="satellite" onerror="this.style.display='none'">
-    </div>`;
+        html += `<span class="ok">> PAYLOAD</span>\n`;
+        html += `<span class="val">${esc(prettyJson(payload))}</span>\n\n`;
 
-    const mapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=16&size=600x300&maptype=mapnik&markers=${lat},${lon},red-pushpin`;
-    html += `<div class="geo-block">
-      <div class="geo-block-title">🗺️ street map</div>
-      <img class="geo-image" src="${mapUrl}" alt="map" onerror="this.style.display='none'">
-    </div>`;
+        html += `<span class="ok">> SIGNATURE</span>\n`;
+        html += `<span style="color:var(--dim)">${esc(sig)} (не раскодируется — это хеш)</span>\n\n`;
 
-    if (nearby.length){
-      html += `<div class="geo-block"><div class="geo-block-title">🏢 nearby (300m)</div>`;
-      nearby.forEach(o => {
-        html += `<div class="geo-row"><span class="k">${esc(o.type)}:</span><span class="v">${esc(o.name)}</span></div>`;
-      });
-      html += `</div>`;
-    }
+        html += `<span class="ok">> ANALYSIS</span>\n`;
+        try {
+          const h = JSON.parse(header);
+          const p = JSON.parse(payload);
 
-    html += `<div class="geo-block">
-      <div class="geo-block-title">🔗 external</div>
-      <div class="geo-actions">
-        <a href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" rel="noopener">Google Maps</a>
-        <a href="https://yandex.ru/maps/?pt=${lon},${lat}&z=17&l=map" target="_blank" rel="noopener">Yandex Maps</a>
-        <a href="https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=17/${lat}/${lon}" target="_blank" rel="noopener">OSM</a>
-        <a href="https://earth.google.com/web/@${lat},${lon},0a,1000d,35y" target="_blank" rel="noopener">Google Earth</a>
-        <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lon}" target="_blank" rel="noopener">Street View</a>
+          if (h.alg) html += `<span class="key">  algorithm:</span> <span class="val">${esc(h.alg)}</span>\n`;
+          if (h.typ) html += `<span class="key">  type:</span> <span class="val">${esc(h.typ)}</span>\n`;
+
+          if (h.alg === 'none'){
+            html += `<span class="err">  ⚠️ ALGORITHM NONE — токен не подписан! Уязвимость.</span>\n`;
+          }
+
+          if (p.exp){
+            const expDate = new Date(p.exp * 1000);
+            const now = new Date();
+            const expired = expDate < now;
+            html += `<span class="key">  expires:</span> <span class="val">${expDate.toLocaleString('ru-RU')}</span>`;
+            html += expired
+              ? ` <span class="err">[ИСТЁК]</span>\n`
+              : ` <span class="ok">[активен]</span>\n`;
+          }
+          if (p.iat){
+            html += `<span class="key">  issued at:</span> <span class="val">${new Date(p.iat * 1000).toLocaleString('ru-RU')}</span>\n`;
+          }
+          if (p.nbf){
+            html += `<span class="key">  not before:</span> <span class="val">${new Date(p.nbf * 1000).toLocaleString('ru-RU')}</span>\n`;
+          }
+          if (p.iss)  html += `<span class="key">  issuer:</span> <span class="val">${esc(p.iss)}</span>\n`;
+          if (p.sub)  html += `<span class="key">  subject:</span> <span class="val">${esc(p.sub)}</span>\n`;
+          if (p.aud)  html += `<span class="key">  audience:</span> <span class="val">${esc(JSON.stringify(p.aud))}</span>\n`;
+        } catch(_){}
+
+        html += `\n<span class="ok">> external</span>\n`;
+        html += extLink('jwt.io', `https://jwt.io/#debugger-io?token=${encodeURIComponent(raw)}`, 'онлайн-дебаггер');
+
+        out.innerHTML = html;
+        return;
+      }
+
+      // Base64
+      if (/^[A-Za-z0-9+/=_\-\s]+$/.test(raw)){
+        const decoded = decodeB64(raw.replace(/\s/g, ''));
+        if (decoded !== null){
+          html += `<span class="ok">> BASE64 DETECTED</span>\n\n`;
+          html += `<span class="key">  length:</span> <span class="val">${raw.length} chars</span>\n`;
+          html += `<span class="key">  type:</span> <span class="val">${/[_-]/.test(raw) ? 'base64url' : 'base64'}</span>\n\n`;
+          html += `<span class="ok">> DECODED</span>\n`;
+          html += `<span class="val">${esc(decoded)}</span>\n\n`;
+
+          const pretty = prettyJson(decoded);
+          if (pretty !== decoded){
+            html += `<span class="ok">> AS JSON</span>\n`;
+            html += `<span class="val">${esc(pretty)}</span>\n`;
+          }
+
+          out.innerHTML = html;
+          return;
+        }
+      }
+
+      // HEX
+      if (/^[0-9a-fA-F\s]+$/.test(raw) && raw.replace(/\s/g,'').length % 2 === 0){
+        try {
+          const hex = raw.replace(/\s/g,'');
+          let str = '';
+          for (let i = 0; i < hex.length; i += 2){
+            str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+          }
+          const utf8 = decodeURIComponent(escape(str));
+          html += `<span class="ok">> HEX DETECTED</span>\n\n`;
+          html += `<span class="ok">> DECODED</span>\n`;
+          html += `<span class="val">${esc(utf8)}</span>\n`;
+          out.innerHTML = html;
+          return;
+        } catch(_){}
+      }
+
+      // URL-encoded
+      if (/%[0-9a-fA-F]{2}/.test(raw)){
+        try {
+          const decoded = decodeURIComponent(raw);
+          html += `<span class="ok">> URL-ENCODED DETECTED</span>\n\n`;
+          html += `<span class="ok">> DECODED</span>\n`;
+          html += `<span class="val">${esc(decoded)}</span>\n`;
+          out.innerHTML = html;
+          return;
+        } catch(_){}
+      }
+
+      html += `<span class="err">> не удалось определить формат</span>\n\n`;
+      html += `<span class="key">поддерживаются:</span>\n`;
+      html += `  · JWT (три части через точку)\n`;
+      html += `  · Base64 / Base64url\n`;
+      html += `  · Hex (чётное кол-во символов 0-9,a-f)\n`;
+      html += `  · URL-encoded (%XX)\n`;
+      out.innerHTML = html;
+    });
+  }
+
+  // =========================================================
+  // GOOGLE DORK BUILDER
+  // =========================================================
+  function toolDork(){
+    openModal('GOOGLE DORK :: builder');
+
+    modalBody.innerHTML = `
+      <div style="margin-bottom:16px">
+        <div style="color:var(--dim);font-size:12px;letter-spacing:1px;margin-bottom:10px">> выбери dork-шаблон:</div>
+        <div id="dorkList" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;padding-right:6px"></div>
       </div>
-    </div>`;
+      <div class="tool-input-row">
+        <input id="dorkTarget" type="text" placeholder="example.com или ключевое слово" autocomplete="off">
+        <button id="dorkBuild">▶ BUILD</button>
+      </div>
+      <div id="dorkOut" class="tool-output">> введи домен и выбери шаблон</div>
+    `;
 
-    html += `</div>`;
-    out.innerHTML = html;
+    const dorks = [
+      { name:'🔓 Open Directories',      d:'site:{target} intitle:"index of"' },
+      { name:'📄 PDF Documents',         d:'site:{target} filetype:pdf' },
+      { name:'📊 Excel Files',           d:'site:{target} filetype:xls OR filetype:xlsx' },
+      { name:'📝 Word Documents',        d:'site:{target} filetype:doc OR filetype:docx' },
+      { name:'🗄 Database Dumps',        d:'site:{target} filetype:sql OR filetype:db' },
+      { name:'⚙️ Config Files',          d:'site:{target} filetype:env OR filetype:config OR filetype:cfg' },
+      { name:'🔑 Passwords',             d:'site:{target} intext:"password" filetype:txt' },
+      { name:'🔐 Login Pages',           d:'site:{target} inurl:login OR inurl:admin OR inurl:signin' },
+      { name:'📷 Open Webcams',          d:'inurl:"/view/index.shtml" OR intitle:"Live View / - AXIS"' },
+      { name:'🚪 phpMyAdmin',            d:'site:{target} intitle:phpMyAdmin' },
+      { name:'🗂 Git Repos',             d:'site:{target} inurl:".git" OR intitle:"Index of /.git"' },
+      { name:'📡 Admin Panels',          d:'site:{target} intitle:"admin panel" OR inurl:admin' },
+      { name:'🔍 Directory Listing',     d:'site:{target} intitle:"Index of /"' },
+      { name:'💾 Backups',               d:'site:{target} filetype:bak OR filetype:backup OR filetype:old' },
+      { name:'📧 Emails',                d:'site:{target} "@{target}"' },
+      { name:'🌐 Subdomains',            d:'site:*.{target}' },
+      { name:'🔗 API Endpoints',         d:'site:{target} inurl:api' },
+      { name:'📁 Sensitive Files',       d:'site:{target} filetype:log OR filetype:txt' },
+      { name:'🗝 SSH Keys',              d:'site:{target} filetype:pem OR filetype:key' },
+      { name:'🧪 Test/Staging',          d:'site:{target} inurl:test OR inurl:staging OR inurl:dev' },
+    ];
 
-    const copyBtn = document.getElementById('geoCopy');
-    if (copyBtn){
-      copyBtn.addEventListener('click', () => {
-        navigator.clipboard?.writeText(coordStr).then(() => {
-          copyBtn.textContent = '✓ Скопировано';
-          setTimeout(() => { copyBtn.textContent = '📋 Скопировать'; }, 1500);
+    const listEl = document.getElementById('dorkList');
+    const input  = document.getElementById('dorkTarget');
+    const btn    = document.getElementById('dorkBuild');
+    const out    = document.getElementById('dorkOut');
+
+    dorks.forEach((dk, i) => {
+      const item = document.createElement('div');
+      item.className = 'social-item';
+      item.style.cursor = 'none';
+      item.style.padding = '8px 12px';
+      item.dataset.idx = i;
+      item.innerHTML = `<span style="flex:1">${esc(dk.name)}</span><span style="font-size:10px;color:var(--dim)">CLICK</span>`;
+      item.addEventListener('click', () => {
+        listEl.querySelectorAll('.social-item').forEach(x => x.classList.remove('found'));
+        item.classList.add('found');
+        listEl.dataset.selected = i;
+      });
+      listEl.appendChild(item);
+    });
+
+    input.focus();
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+
+    btn.addEventListener('click', () => {
+      const target = input.value.trim();
+      const selIdx = listEl.dataset.selected;
+
+      if (selIdx === undefined){
+        out.innerHTML = `<span class="err">> сначала выбери шаблон выше</span>`;
+        return;
+      }
+      if (!target){
+        out.innerHTML = `<span class="err">> введи домен или ключевое слово</span>`;
+        return;
+      }
+
+      const dork = dorks[+selIdx];
+      const query = dork.d.replace(/\{target\}/g, target);
+      const encoded = encodeURIComponent(query);
+
+      let html = `<span class="ok">> ${esc(dork.name)}</span>\n\n`;
+      html += `<span class="key">  target:</span> <span class="val">${esc(target)}</span>\n`;
+      html += `<span class="key">  dork:</span>\n`;
+      html += `<span class="val">${esc(query)}</span>\n\n`;
+
+      html += `<span class="ok">> открыть в поисковиках</span>\n`;
+      html += extLink('Google',     `https://www.google.com/search?q=${encoded}`, 'основной');
+      html += extLink('Bing',       `https://www.bing.com/search?q=${encoded}`, 'альтернатива');
+      html += extLink('DuckDuckGo', `https://duckduckgo.com/?q=${encoded}`, 'без слежки');
+      html += extLink('Yandex',     `https://yandex.com/search/?text=${encoded}`, 'для СНГ');
+
+      html += `\n<span class="ok">> quick actions</span>\n`;
+      html += `  <span class="key">·</span> <a class="val" href="javascript:void(0)" id="copyDork" style="text-decoration:none">Скопировать dork</a> <span style="color:var(--dim);font-size:11px">— в буфер обмена</span>\n`;
+      html += `  <span class="key">·</span> <a class="val" href="javascript:void(0)" id="copyQuery" style="text-decoration:none">Скопировать query</a> <span style="color:var(--dim);font-size:11px">— без URL-кодирования</span>\n`;
+
+      html += `\n<span style="color:var(--dim);font-size:11px">⚠️ Используй легально. Dorking по чужим сайтам без разрешения — нарушение закона.</span>`;
+
+      out.innerHTML = html;
+
+      document.getElementById('copyDork')?.addEventListener('click', () => {
+        navigator.clipboard?.writeText(query).then(() => {
+          const el = document.getElementById('copyDork');
+          if (el) el.textContent = 'Скопировано ✓';
         });
       });
-    }
-  });
-}
+      document.getElementById('copyQuery')?.addEventListener('click', () => {
+        navigator.clipboard?.writeText(encoded).then(() => {
+          const el = document.getElementById('copyQuery');
+          if (el) el.textContent = 'Скопировано ✓';
+        });
+      });
+    });
+  }
 
-// ПОДКЛЮЧЕНИЕ
-const handlers = {
-  sweep: toolSweep,
-  domain: toolDomain,
-  reverse: toolReverse,
-  iploc: toolIpLoc,
-  jwt: toolJwt,
-  dork: toolDork,
-};
-};
+  // =========================================================
+  // ПОДКЛЮЧЕНИЕ
+  // =========================================================
+  const handlers = {
+    sweep: toolSweep,
+    domain: toolDomain,
+    reverse: toolReverse,
+    iploc: toolIpLoc,
+    jwt: toolJwt,
+    dork: toolDork,
+  };
 
   document.querySelectorAll('.tool-card').forEach(card => {
     const tool = card.dataset.tool;
