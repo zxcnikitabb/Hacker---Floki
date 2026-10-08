@@ -862,6 +862,7 @@ function toolGeo(){
     iploc: toolIpLoc,
     jwt: toolJwt,
     dork: toolDork,
+     geo: toolGeo,
   };
 
   document.querySelectorAll('.tool-card').forEach(card => {
