@@ -526,6 +526,122 @@ function toolJwt(){
     out.innerHTML = html;
   });
 }
+// GOOGLE DORK BUILDER
+function toolDork(){
+  openModal('GOOGLE DORK :: builder');
+
+  modalBody.innerHTML = `
+    <div style="margin-bottom:16px">
+      <div style="color:var(--dim);font-size:12px;letter-spacing:1px;margin-bottom:10px">> выбери dork-шаблон:</div>
+      <div id="dorkList" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;padding-right:6px"></div>
+    </div>
+    <div class="tool-input-row">
+      <input id="dorkTarget" type="text" placeholder="example.com или ключевое слово" autocomplete="off">
+      <button id="dorkBuild">▶ BUILD</button>
+    </div>
+    <div id="dorkOut" class="tool-output">> введи домен и выбери шаблон</div>
+  `;
+
+  // Шаблоны dork-запросов
+  const dorks = [
+    { name:'🔓 Open Directories',      d:'site:{target} intitle:"index of"' },
+    { name:'📄 PDF Documents',         d:'site:{target} filetype:pdf' },
+    { name:'📊 Excel Files',           d:'site:{target} filetype:xls OR filetype:xlsx' },
+    { name:'📝 Word Documents',        d:'site:{target} filetype:doc OR filetype:docx' },
+    { name:'🗄 Database Dumps',        d:'site:{target} filetype:sql OR filetype:db' },
+    { name:'⚙️ Config Files',          d:'site:{target} filetype:env OR filetype:config OR filetype:cfg' },
+    { name:'🔑 Passwords',             d:'site:{target} intext:"password" filetype:txt' },
+    { name:'🔐 Login Pages',           d:'site:{target} inurl:login OR inurl:admin OR inurl:signin' },
+    { name:'📷 Open Webcams',          d:'inurl:"/view/index.shtml" OR intitle:"Live View / - AXIS"' },
+    { name:'🚪 phpMyAdmin',            d:'site:{target} intitle:phpMyAdmin' },
+    { name:'🗂 Git Repos',             d:'site:{target} inurl:".git" OR intitle:"Index of /.git"' },
+    { name:'📡 Admin Panels',          d:'site:{target} intitle:"admin panel" OR inurl:admin' },
+    { name:'🔍 Directory Listing',     d:'site:{target} intitle:"Index of /"' },
+    { name:'💾 Backups',               d:'site:{target} filetype:bak OR filetype:backup OR filetype:old' },
+    { name:'📧 Emails',                d:'site:{target} "@{target}"' },
+    { name:'🌐 Subdomains',            d:'site:*.{target}' },
+    { name:'🔗 API Endpoints',         d:'site:{target} inurl:api' },
+    { name:'📁 Sensitive Files',       d:'site:{target} filetype:log OR filetype:txt' },
+    { name:'🗝 SSH Keys',              d:'site:{target} filetype:pem OR filetype:key' },
+    { name:'🧪 Test/Staging',          d:'site:{target} inurl:test OR inurl:staging OR inurl:dev' },
+  ];
+
+  const listEl = document.getElementById('dorkList');
+  const input  = document.getElementById('dorkTarget');
+  const btn    = document.getElementById('dorkBuild');
+  const out    = document.getElementById('dorkOut');
+
+  // Отрисовка списка dork'ов
+  dorks.forEach((dk, i) => {
+    const item = document.createElement('div');
+    item.className = 'social-item';
+    item.style.cursor = 'none';
+    item.style.padding = '8px 12px';
+    item.dataset.idx = i;
+    item.innerHTML = `<span style="flex:1">${esc(dk.name)}</span><span style="font-size:10px;color:var(--dim)">CLICK</span>`;
+    item.addEventListener('click', () => {
+      // Снимаем выделение с других
+      listEl.querySelectorAll('.social-item').forEach(x => x.classList.remove('found'));
+      item.classList.add('found');
+      listEl.dataset.selected = i;
+    });
+    listEl.appendChild(item);
+  });
+
+  input.focus();
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+
+  btn.addEventListener('click', () => {
+    const target = input.value.trim();
+    const selIdx = listEl.dataset.selected;
+
+    if (selIdx === undefined){
+      out.innerHTML = `<span class="err">> сначала выбери шаблон выше</span>`;
+      return;
+    }
+    if (!target){
+      out.innerHTML = `<span class="err">> введи домен или ключевое слово</span>`;
+      return;
+    }
+
+    const dork = dorks[+selIdx];
+    const query = dork.d.replace(/\{target\}/g, target);
+    const encoded = encodeURIComponent(query);
+
+    let html = `<span class="ok">> ${esc(dork.name)}</span>\n\n`;
+    html += `<span class="key">  target:</span> <span class="val">${esc(target)}</span>\n`;
+    html += `<span class="key">  dork:</span>\n`;
+    html += `<span class="val">${esc(query)}</span>\n\n`;
+
+    html += `<span class="ok">> открыть в поисковиках</span>\n`;
+    html += extLink('Google',     `https://www.google.com/search?q=${encoded}`, 'основной');
+    html += extLink('Bing',       `https://www.bing.com/search?q=${encoded}`, 'альтернатива');
+    html += extLink('DuckDuckGo', `https://duckduckgo.com/?q=${encoded}`, 'без слежки');
+    html += extLink('Yandex',     `https://yandex.com/search/?text=${encoded}`, 'для СНГ');
+
+    html += `\n<span class="ok">> quick actions</span>\n`;
+    html += `  <span class="key">·</span> <a class="val" href="javascript:void(0)" id="copyDork" style="text-decoration:none">Скопировать dork</a> <span style="color:var(--dim);font-size:11px">— в буфер обмена</span>\n`;
+    html += `  <span class="key">·</span> <a class="val" href="javascript:void(0)" id="copyQuery" style="text-decoration:none">Скопировать query</a> <span style="color:var(--dim);font-size:11px">— без URL-кодирования</span>\n`;
+
+    html += `\n<span style="color:var(--dim);font-size:11px">⚠️ Используй легально. Dorking по чужим сайтам без разрешения — нарушение закона.</span>`;
+
+    out.innerHTML = html;
+
+    // Кнопки копирования
+    document.getElementById('copyDork')?.addEventListener('click', () => {
+      navigator.clipboard?.writeText(query).then(() => {
+        const el = document.getElementById('copyDork');
+        if (el) el.textContent = 'Скопировано ✓';
+      });
+    });
+    document.getElementById('copyQuery')?.addEventListener('click', () => {
+      navigator.clipboard?.writeText(encoded).then(() => {
+        const el = document.getElementById('copyQuery');
+        if (el) el.textContent = 'Скопировано ✓';
+      });
+    });
+  });
+}
 
   // ПОДКЛЮЧЕНИЕ
 const handlers = {
