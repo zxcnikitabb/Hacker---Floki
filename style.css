@@ -622,5 +622,105 @@ footer{
   .webvm-btn{
     padding:4px 10px;
     font-size:10px;
+
+
+    /* ============ GEOINT MODULE ============ */
+.geo-result{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.geo-block{
+  border:1px solid rgba(0,255,156,.15);
+  border-radius:6px;
+  padding:12px 14px;
+  background:rgba(0,0,0,.4);
+}
+
+.geo-block-title{
+  color:var(--neon);
+  font-size:11px;
+  letter-spacing:2px;
+  margin-bottom:8px;
+  text-transform:uppercase;
+}
+
+.geo-row{
+  display:flex;
+  gap:10px;
+  padding:3px 0;
+  font-size:12px;
+}
+
+.geo-row .k{
+  color:var(--dim);
+  min-width:110px;
+  flex-shrink:0;
+}
+
+.geo-row .v{
+  color:var(--neon2);
+  word-break:break-word;
+}
+
+.geo-row .v a{
+  color:var(--neon2);
+  text-decoration:none;
+  border-bottom:1px dashed rgba(0,255,213,.4);
+}
+
+.geo-image{
+  width:100%;
+  border:1px solid rgba(0,255,156,.25);
+  border-radius:6px;
+  display:block;
+  margin-top:8px;
+}
+
+.geo-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:8px;
+}
+
+.geo-actions a,
+.geo-actions button{
+  font-family:inherit;
+  font-size:11px;
+  letter-spacing:1px;
+  padding:6px 12px;
+  background:rgba(0,255,156,.08);
+  border:1px solid rgba(0,255,156,.3);
+  color:var(--neon);
+  text-decoration:none;
+  border-radius:4px;
+  cursor:none;
+  transition:background .2s, color .2s;
+}
+
+.geo-actions a:hover,
+.geo-actions button:hover{
+  background:var(--neon);
+  color:#000;
+}
+
+.geo-hint-input{
+  color:var(--dim);
+  font-size:11px;
+  margin-top:6px;
+  letter-spacing:1px;
+}
+
+@media (max-width:900px){
+  .geo-row .k{
+    min-width:90px;
+    font-size:11px;
+  }
+  .geo-row .v{
+    font-size:11px;
+  }
+}
   }
 }
