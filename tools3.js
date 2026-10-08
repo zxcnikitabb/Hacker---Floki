@@ -850,7 +850,6 @@ const handlers = {
   iploc: toolIpLoc,
   jwt: toolJwt,
   dork: toolDork,
-  geo: toolGeo,
 };
 };
 
