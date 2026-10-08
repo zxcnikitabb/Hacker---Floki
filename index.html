@@ -200,6 +200,44 @@
     <div><strong data-count="99">0</strong><span>% uptime</span></div>
   </div>
 </section>
+<!-- WEBVM :: LINUX IN BROWSER -->
+<section id="webvm" class="webvm-section">
+  <h2 class="section-title">/<span> KALI_SANDBOX </span>/</h2>
+  <p class="globe-hint">[ настоящая Linux в браузере · загрузка 30–60 сек · требуется Wi-Fi ]</p>
+
+  <div class="webvm-wrap">
+    <div class="webvm-bar">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="term-title">webvm — debian — x86 — WASM</span>
+      <button class="webvm-btn" id="webvmLoad">▶ ЗАГРУЗИТЬ</button>
+      <a class="webvm-btn webvm-btn-alt" href="https://webvm.io/" target="_blank" rel="noopener">↗ ОТКРЫТЬ</a>
+    </div>
+
+    <div class="webvm-body" id="webvmBody">
+      <div class="webvm-placeholder">
+        <div class="webvm-logo">
+          <pre>
+    ╔═══════════════════════════════════════╗
+    ║   LINUX · DEBIAN · x86 · WASM         ║
+    ║   работает прямо в браузере           ║
+    ╚═══════════════════════════════════════╝
+          </pre>
+        </div>
+        <p class="webvm-warn">
+          ⚠️ Загрузка ~100–500 МБ. Требуется стабильный интернет.<br>
+          На слабых телефонах может не запуститься.
+        </p>
+        <p class="webvm-info">
+          🐧 Настоящая Debian Linux · bash · python · apt · компилятор<br>
+          🎯 Попробуй команды: <code>ls</code>, <code>cat /etc/os-release</code>, <code>python3 --version</code>
+        </p>
+        <button class="btn" id="webvmStart">▶ ЗАПУСТИТЬ LINUX</button>
+      </div>
+    </div>
+  </div>
+</section>
 
 <section id="contact" class="contact">
   <h2 class="section-title">/<span> CONTACT </span>/</h2>
