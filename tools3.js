@@ -642,15 +642,216 @@ function toolDork(){
     });
   });
 }
+// GEOINT :: универсальный геопространственный анализ
+function toolGeo(){
+  openModal('GEOINT :: geo analysis');
 
-  // ПОДКЛЮЧЕНИЕ
+  modalBody.innerHTML = `
+    <div class="tool-input-row">
+      <input id="geoInput" type="text" placeholder="55.7558, 37.6173 или адрес" autocomplete="off">
+      <button id="geoRun">▶ ANALYZE</button>
+    </div>
+    <div class="geo-hint-input">
+      > поддерживается: координаты · адрес · Plus Code · ссылка Google/OSM
+    </div>
+    <div id="geoOut" class="tool-output" style="margin-top:14px">> введи координаты или адрес</div>
+  `;
+
+  const input = document.getElementById('geoInput');
+  const btn   = document.getElementById('geoRun');
+  const out   = document.getElementById('geoOut');
+
+  input.focus();
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+
+  function parseCoords(str){
+    const m = str.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
+    if (m) return { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
+    const g = str.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (g) return { lat: parseFloat(g[1]), lon: parseFloat(g[2]) };
+    const o = str.match(/map=\d+\/(-?\d+\.?\d*)\/(-?\d+\.?\d*)/);
+    if (o) return { lat: parseFloat(o[1]), lon: parseFloat(o[2]) };
+    return null;
+  }
+
+  async function reverseGeocode(lat, lon){
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ru`;
+    const r = await fetch(url, { headers: { 'User-Agent': 'HACKER-FLOKI-OSINT' } });
+    return r.json();
+  }
+
+  async function forwardGeocode(q){
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=ru`;
+    const r = await fetch(url, { headers: { 'User-Agent': 'HACKER-FLOKI-OSINT' } });
+    return r.json();
+  }
+
+  async function getElevation(lat, lon){
+    try {
+      const r = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
+      const d = await r.json();
+      return d.results?.[0]?.elevation ?? '—';
+    } catch(_){ return '—'; }
+  }
+
+  async function getWeather(lat, lon){
+    try {
+      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`);
+      const d = await r.json();
+      const c = d.current || {};
+      const code = c.weather_code;
+      const desc = {0:'ясно',1:'преим. ясно',2:'перем. облачно',3:'облачно',45:'туман',48:'изморозь',51:'морось',61:'дождь',63:'дождь',65:'ливень',71:'снег',73:'снег',75:'снегопад',80:'ливни',95:'гроза',96:'гроза с градом'}[code] || '—';
+      return `${c.temperature_2m}°C, ${desc}`;
+    } catch(_){ return '—'; }
+  }
+
+  async function getNearby(lat, lon){
+    try {
+      const q = `[out:json][timeout:20];(node(around:300,${lat},${lon})[amenity];way(around:300,${lat},${lon})[amenity];);out center 15;`;
+      const r = await fetch('https://overpass-api.de/api/interpreter', { method:'POST', body:'data=' + encodeURIComponent(q) });
+      const d = await r.json();
+      return (d.elements || []).slice(0, 10).map(el => ({ name: el.tags?.name || '(без имени)', type: el.tags?.amenity || 'объект' }));
+    } catch(_){ return []; }
+  }
+
+  function toDMS(deg, type){
+    const d = Math.abs(deg);
+    const degrees = Math.floor(d);
+    const minFloat = (d - degrees) * 60;
+    const minutes = Math.floor(minFloat);
+    const seconds = ((minFloat - minutes) * 60).toFixed(2);
+    const dir = type === 'lat' ? (deg >= 0 ? 'N' : 'S') : (deg >= 0 ? 'E' : 'W');
+    return `${degrees}°${minutes}'${seconds}"${dir}`;
+  }
+
+  btn.addEventListener('click', async () => {
+    const raw = input.value.trim();
+    if (!raw) return;
+
+    out.innerHTML = '<span class="tool-loading">> анализ</span>';
+
+    let lat, lon, addressData = null;
+    const coords = parseCoords(raw);
+
+    if (coords){
+      lat = coords.lat;
+      lon = coords.lon;
+    } else {
+      try {
+        const results = await forwardGeocode(raw);
+        if (!results.length){
+          out.innerHTML = `<span class="err">> адрес не найден</span>`;
+          return;
+        }
+        lat = parseFloat(results[0].lat);
+        lon = parseFloat(results[0].lon);
+        addressData = results[0];
+      } catch(e){
+        out.innerHTML = `<span class="err">> ошибка геокодинга</span>`;
+        return;
+      }
+    }
+
+    if (!lat || !lon || isNaN(lat) || isNaN(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180){
+      out.innerHTML = `<span class="err">> некорректные координаты</span>`;
+      return;
+    }
+
+    const [addr, elev, weather, nearby] = await Promise.all([
+      addressData ? Promise.resolve({ display_name: addressData.display_name, address: addressData.address }) : reverseGeocode(lat, lon).catch(()=>null),
+      getElevation(lat, lon),
+      getWeather(lat, lon),
+      getNearby(lat, lon)
+    ]);
+
+    const latFixed = lat.toFixed(6);
+    const lonFixed = lon.toFixed(6);
+    const coordStr = `${latFixed}, ${lonFixed}`;
+
+    let html = `<div class="geo-result">`;
+
+    html += `<div class="geo-block">
+      <div class="geo-block-title">📍 coordinates</div>
+      <div class="geo-row"><span class="k">latitude:</span><span class="v">${latFixed}</span></div>
+      <div class="geo-row"><span class="k">longitude:</span><span class="v">${lonFixed}</span></div>
+      <div class="geo-row"><span class="k">DMS:</span><span class="v">${toDMS(lat, 'lat')} ${toDMS(lon, 'lon')}</span></div>
+      <div class="geo-actions"><button id="geoCopy">📋 Скопировать</button></div>
+    </div>`;
+
+    if (addr){
+      const a = addr.address || {};
+      html += `<div class="geo-block">
+        <div class="geo-block-title">🌍 address</div>
+        ${addr.display_name ? `<div class="geo-row"><span class="k">full:</span><span class="v">${esc(addr.display_name)}</span></div>` : ''}
+        ${a.country ? `<div class="geo-row"><span class="k">country:</span><span class="v">${esc(a.country)}</span></div>` : ''}
+        ${a.state ? `<div class="geo-row"><span class="k">region:</span><span class="v">${esc(a.state)}</span></div>` : ''}
+        ${a.city || a.town || a.village ? `<div class="geo-row"><span class="k">city:</span><span class="v">${esc(a.city || a.town || a.village)}</span></div>` : ''}
+        ${a.postcode ? `<div class="geo-row"><span class="k">postcode:</span><span class="v">${esc(a.postcode)}</span></div>` : ''}
+      </div>`;
+    }
+
+    html += `<div class="geo-block">
+      <div class="geo-block-title">⛰️ nature</div>
+      <div class="geo-row"><span class="k">elevation:</span><span class="v">${elev} м</span></div>
+      <div class="geo-row"><span class="k">weather:</span><span class="v">${esc(weather)}</span></div>
+    </div>`;
+
+    const satUrl = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${lon-0.003},${lat-0.002},${lon+0.003},${lat+0.002}&bboxSR=4326&imageSR=4326&size=600,400&f=image&format=png`;
+    html += `<div class="geo-block">
+      <div class="geo-block-title">🛰️ satellite view</div>
+      <img class="geo-image" src="${satUrl}" alt="satellite" onerror="this.style.display='none'">
+    </div>`;
+
+    const mapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=16&size=600x300&maptype=mapnik&markers=${lat},${lon},red-pushpin`;
+    html += `<div class="geo-block">
+      <div class="geo-block-title">🗺️ street map</div>
+      <img class="geo-image" src="${mapUrl}" alt="map" onerror="this.style.display='none'">
+    </div>`;
+
+    if (nearby.length){
+      html += `<div class="geo-block"><div class="geo-block-title">🏢 nearby (300m)</div>`;
+      nearby.forEach(o => {
+        html += `<div class="geo-row"><span class="k">${esc(o.type)}:</span><span class="v">${esc(o.name)}</span></div>`;
+      });
+      html += `</div>`;
+    }
+
+    html += `<div class="geo-block">
+      <div class="geo-block-title">🔗 external</div>
+      <div class="geo-actions">
+        <a href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" rel="noopener">Google Maps</a>
+        <a href="https://yandex.ru/maps/?pt=${lon},${lat}&z=17&l=map" target="_blank" rel="noopener">Yandex Maps</a>
+        <a href="https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=17/${lat}/${lon}" target="_blank" rel="noopener">OSM</a>
+        <a href="https://earth.google.com/web/@${lat},${lon},0a,1000d,35y" target="_blank" rel="noopener">Google Earth</a>
+        <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lon}" target="_blank" rel="noopener">Street View</a>
+      </div>
+    </div>`;
+
+    html += `</div>`;
+    out.innerHTML = html;
+
+    const copyBtn = document.getElementById('geoCopy');
+    if (copyBtn){
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard?.writeText(coordStr).then(() => {
+          copyBtn.textContent = '✓ Скопировано';
+          setTimeout(() => { copyBtn.textContent = '📋 Скопировать'; }, 1500);
+        });
+      });
+    }
+  });
+}
+
+// ПОДКЛЮЧЕНИЕ
 const handlers = {
   sweep: toolSweep,
   domain: toolDomain,
-   reverse: toolReverse, 
-   iploc: toolIpLoc,
-   jwt: toolJwt,
-   dork: toolDork,
+  reverse: toolReverse,
+  iploc: toolIpLoc,
+  jwt: toolJwt,
+  dork: toolDork,
+  geo: toolGeo,
+};
 };
 
   document.querySelectorAll('.tool-card').forEach(card => {
