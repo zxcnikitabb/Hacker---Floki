@@ -261,22 +261,129 @@ html += extLink('RIPEstat',    `https://stat.ripe.net/${ip}`,             'ст�
     input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
 
     btn.addEventListener('click', async () => {
-      const hash = input.value.trim().toLowerCase();
-      if (!hash) return;
-      if (!/^[a-f0-9]+$/.test(hash)){
-        out.innerHTML = '<span class="err">> хеш должен содержать только 0-9 и a-f</span>';
-        return;
-      }
-      const types = {32:'MD5',40:'SHA1',64:'SHA256',96:'SHA384',128:'SHA512'};
-      const type = types[hash.length];
-      if (!type){
-        out.innerHTML = `<span class="err">> неизвестная длина: ${hash.length} символов</span>\n<span style="color:var(--dim)">поддерживаются: 32, 40, 64, 96, 128</span>`;
-        return;
-      }
-      let html = `<span class="ok">> HASH: ${esc(hash)}</span>\n`;
-      html += row('  length', hash.length + ' chars');
-      html += row('  type',   type);
-      out.innerHTML = html + '\n<span class="tool-loading">> поиск в БД</span>';
+      const hash = input.value.trim();
+if (!hash) return;
+
+// === Определение типа хеша ===
+let type = null;
+let hashInfo = {};
+const isHex = /^[a-f0-9]+$/i.test(hash);
+
+// --- Crypt-форматы ---
+if (hash.startsWith('$1$')){
+  type = 'MD5-crypt';
+  const parts = hash.split('$');
+  hashInfo = { format: '$1$', salt: parts[2] || '—', algorithm: 'md5crypt (Unix)' };
+} else if (hash.startsWith('$2a$') || hash.startsWith('$2b$') || hash.startsWith('$2y$')){
+  type = 'Bcrypt';
+  const parts = hash.split('$');
+  hashInfo = { format: hash.slice(0,4), cost: parts[2] || '—', algorithm: 'bcrypt' };
+} else if (hash.startsWith('$5$')){
+  type = 'SHA256-crypt';
+  const parts = hash.split('$');
+  hashInfo = { format: '$5$', salt: parts[2] || '—', algorithm: 'sha256crypt (Unix)' };
+} else if (hash.startsWith('$6$')){
+  type = 'SHA512-crypt';
+  const parts = hash.split('$');
+  hashInfo = { format: '$6$', salt: parts[2] || '—', algorithm: 'sha512crypt (Unix)' };
+} else if (hash.startsWith('$argon2')){
+  type = 'Argon2';
+  hashInfo = { format: hash.split('$')[1] || 'argon2', algorithm: 'argon2 (современный)' };
+} else if (hash.startsWith('$y$')){
+  type = 'yescrypt';
+  hashInfo = { format: '$y$', algorithm: 'yescrypt (современный Linux)' };
+} else if (hash.startsWith('{SSHA}') || hash.startsWith('{SHA}')){
+  type = 'LDAP Hash';
+  hashInfo = { format: hash.slice(0,5), algorithm: 'LDAP (SHA/SSHA)' };
+}
+// --- Hex-форматы ---
+else if (isHex){
+  const hexTypes = {
+    32:  'MD5',
+    40:  'SHA1',
+    56:  'SHA224',
+    64:  'SHA256',
+    96:  'SHA384',
+    128: 'SHA512',
+  };
+  type = hexTypes[hash.length];
+  if (!type){
+    out.innerHTML = `<span class="err">> неизвестная длина hex-хеша: ${hash.length}</span>\n<span style="color:var(--dim)">поддерживаются: 32, 40, 56, 64, 96, 128</span>`;
+    return;
+  }
+  hashInfo = { length: hash.length };
+}
+else {
+  out.innerHTML = `<span class="err">> не удалось определить тип хеша</span>\n\n`;
+  out.innerHTML += `<span class="key">поддерживаются:</span>\n`;
+  out.innerHTML += `  · MD5, SHA1, SHA256, SHA512 (hex)\n`;
+  out.innerHTML += `  · MD5-crypt ($1$)\n`;
+  out.innerHTML += `  · Bcrypt ($2a$, $2b$, $2y$)\n`;
+  out.innerHTML += `  · SHA256-crypt ($5$)\n`;
+  out.innerHTML += `  · SHA512-crypt ($6$)\n`;
+  out.innerHTML += `  · Argon2 ($argon2)\n`;
+  out.innerHTML += `  · yescrypt ($y$)\n`;
+  return;
+}
+
+// === Вывод базовой инфы ===
+let html = `<span class="ok">> HASH: ${esc(hash)}</span>\n\n`;
+html += `<span class="key">  type:</span> <span class="val">${esc(type)}</span>\n`;
+if (hashInfo.length) html += `<span class="key">  length:</span> <span class="val">${hashInfo.length} chars</span>\n`;
+if (hashInfo.format) html += `<span class="key">  format:</span> <span class="val">${esc(hashInfo.format)}</span>\n`;
+if (hashInfo.salt) html += `<span class="key">  salt:</span> <span class="val">${esc(hashInfo.salt)}</span>\n`;
+if (hashInfo.cost) html += `<span class="key">  cost:</span> <span class="val">${esc(hashInfo.cost)}</span>\n`;
+if (hashInfo.algorithm) html += `<span class="key">  algorithm:</span> <span class="val">${esc(hashInfo.algorithm)}</span>\n`;
+
+// === Инфо о типе ===
+const infoMap = {
+  'MD5':           '⚠️ MD5 устарел. Ломается за секунды. Не используй для паролей!',
+  'SHA1':          '⚠️ SHA1 устарел. Ломается быстро.',
+  'SHA224':        'SHA224 — усечённый SHA256.',
+  'SHA256':        'SHA256 — безопасен для данных. Для паролей нужен +salt + итерации.',
+  'SHA384':        'SHA384 — часть SHA-2.',
+  'SHA512':        'SHA512 — безопасен, для паролей лучше bcrypt/argon2.',
+  'MD5-crypt':     '⚠️ MD5-crypt (Unix) — устаревший формат. Легко ломается.',
+  'Bcrypt':        '✅ Bcrypt — хороший алгоритм для паролей. Медленный по дизайну.',
+  'SHA256-crypt':  'SHA256-crypt (Unix) — умеренная защита.',
+  'SHA512-crypt':  'SHA512-crypt (Unix) — хорошая защита.',
+  'Argon2':        '✅ Argon2 — современный стандарт. Победитель Password Hashing Competition.',
+  'yescrypt':      '✅ yescrypt — современный формат в новых Linux.',
+  'LDAP Hash':     'LDAP-хеш (SHA/SSHA). Используется в OpenLDAP.',
+};
+if (infoMap[type]){
+  html += `\n<span class="ok">> info</span>\n`;
+  html += `<span style="color:var(--dim)">  ${infoMap[type]}</span>\n`;
+}
+
+// === Ссылки на кракеры ===
+const encHash = encodeURIComponent(hash);
+html += `\n<span class="ok">> crack tools</span>\n`;
+html += extLink('CrackStation', `https://crackstation.net/`, 'для MD5/SHA1/SHA256');
+html += extLink('Hashes.com',   `https://hashes.com/en/decrypt/hash`, 'много алгоритмов');
+html += extLink('Cmd5',         `https://www.cmd5.org/?hash=${encHash}`, 'онлайн-дешифратор');
+html += extLink('Google',       `https://www.google.com/search?q=%22${encHash}%22`, 'поиск в интернете');
+
+// === Команды hashcat / john ===
+const hashcatModes = {
+  'MD5': 0, 'SHA1': 100, 'SHA256': 1400, 'SHA512': 1700,
+  'MD5-crypt': 500, 'Bcrypt': 3200, 'SHA256-crypt': 7400, 'SHA512-crypt': 1800,
+};
+const johnFormats = {
+  'MD5': 'raw-md5', 'SHA1': 'raw-sha1', 'SHA256': 'raw-sha256', 'SHA512': 'raw-sha512',
+  'MD5-crypt': 'md5crypt', 'Bcrypt': 'bcrypt', 'SHA256-crypt': 'sha256crypt', 'SHA512-crypt': 'sha512crypt',
+};
+html += `\n<span class="ok">> offline crack commands</span>\n`;
+if (hashcatModes[type] !== undefined){
+  html += `<span class="key">  hashcat:</span>\n`;
+  html += `<span class="val">  hashcat -m ${hashcatModes[type]} hash.txt wordlist.txt</span>\n`;
+}
+if (johnFormats[type]){
+  html += `<span class="key">  john:</span>\n`;
+  html += `<span class="val">  john --format=${johnFormats[type]} hash.txt</span>\n`;
+}
+
+out.innerHTML = html;
 
       let found = false;
       try {
