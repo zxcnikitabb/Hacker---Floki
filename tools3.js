@@ -1099,7 +1099,7 @@ function toolGeo(){
     sweep: toolSweep,
     domain: toolDomain,
     reverse: toolReverse,
-    iploc: toolIploc,
+    iploc: toolIpLoc,
     jwt: toolJwt,
     dork: toolDork,
      geo: toolGeo,
