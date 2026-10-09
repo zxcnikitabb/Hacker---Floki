@@ -741,34 +741,259 @@ function toolGeo(){
     out.innerHTML = '<span class="tool-loading">> анализ</span>';
 
     let lat, lon, addressData = null;
-    const coords = parseCoords(raw);
 
-    if (coords){
-      lat = coords.lat;
-      lon = coords.lon;
-    } else {
-      try {
-        const results = await forwardGeocode(raw);
-        if (!results.length){
-          out.innerHTML = `<span class="err">> адрес не найден</span>`;
-          return;
-        }
-        lat = parseFloat(results[0].lat);
-        lon = parseFloat(results[0].lon);
-        addressData = results[0];
-      } catch(e){
-        out.innerHTML = `<span class="err">> ошибка геокодинга</span>`;
-        return;
-      }
-    }
+// =========================================================
+// GEOINT :: ГИБРИДНЫЙ (EXIF + AI tools)
+// =========================================================
+function toolGeo(){
+  openModal('GEOINT :: image intelligence');
 
-    if (!lat || !lon || isNaN(lat) || isNaN(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180){
-      out.innerHTML = `<span class="err">> некорректные координаты</span>`;
+  modalBody.innerHTML = `
+    <div style="margin-bottom:14px">
+      <label class="drop-zone" id="geoDrop">
+        <input type="file" id="geoFile" accept="image/*">
+        <div>📷 загрузи фото (клик или drag&drop)<br>
+        <span style="font-size:11px;color:var(--dim)">файл обрабатывается локально, никуда не уходит</span></div>
+      </label>
+    </div>
+
+    <div style="margin-bottom:16px">
+      <div style="color:var(--dim);font-size:11px;letter-spacing:1px;margin-bottom:8px">> или введи координаты / адрес вручную:</div>
+      <div class="tool-input-row">
+        <input id="geoManual" type="text" placeholder="55.7558, 37.6173 или адрес" autocomplete="off">
+        <button id="geoManualRun">▶ ANALYZE</button>
+      </div>
+    </div>
+
+    <div id="geoOut" class="tool-output">> жду фото или координаты</div>
+  `;
+
+  const dropZone = document.getElementById('geoDrop');
+  const fileEl   = document.getElementById('geoFile');
+  const manualIn = document.getElementById('geoManual');
+  const manualBtn= document.getElementById('geoManualRun');
+  const out      = document.getElementById('geoOut');
+
+  // ===== Drag & drop =====
+  ['dragenter','dragover'].forEach(ev =>
+    dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('dragover'); })
+  );
+  ['dragleave','drop'].forEach(ev =>
+    dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('dragover'); })
+  );
+  dropZone.addEventListener('drop', e => {
+    const f = e.dataTransfer.files[0];
+    if (f) processImage(f);
+  });
+  fileEl.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (f) processImage(f);
+  });
+
+  manualBtn.addEventListener('click', () => {
+    const raw = manualIn.value.trim();
+    if (raw) analyzeCoordsFromString(raw);
+  });
+  manualIn.addEventListener('keydown', e => { if (e.key === 'Enter') manualBtn.click(); });
+
+  // ===== Парсинг координат из строки =====
+  function parseCoords(str){
+    const m = str.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
+    if (m) return { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
+    const g = str.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (g) return { lat: parseFloat(g[1]), lon: parseFloat(g[2]) };
+    const o = str.match(/map=\d+\/(-?\d+\.?\d*)\/(-?\d+\.?\d*)/);
+    if (o) return { lat: parseFloat(o[1]), lon: parseFloat(o[2]) };
+    return null;
+  }
+
+  // ===== Геокодеры =====
+  async function reverseGeocode(lat, lon){
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ru`;
+      const r = await fetch(url, { headers: { 'User-Agent': 'HACKER-FLOKI-OSINT' } });
+      return r.json();
+    } catch(_){ return null; }
+  }
+
+  async function forwardGeocode(q){
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=ru`;
+      const r = await fetch(url, { headers: { 'User-Agent': 'HACKER-FLOKI-OSINT' } });
+      return r.json();
+    } catch(_){ return []; }
+  }
+
+  async function getElevation(lat, lon){
+    try {
+      const r = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
+      const d = await r.json();
+      return d.results?.[0]?.elevation ?? '—';
+    } catch(_){ return '—'; }
+  }
+
+  async function getWeather(lat, lon){
+    try {
+      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`);
+      const d = await r.json();
+      const c = d.current || {};
+      const code = c.weather_code;
+      const desc = {0:'ясно',1:'преим. ясно',2:'перем. облачно',3:'облачно',45:'туман',48:'изморозь',51:'морось',61:'дождь',63:'дождь',65:'ливень',71:'снег',73:'снег',75:'снегопад',80:'ливни',95:'гроза',96:'гроза с градом'}[code] || '—';
+      return `${c.temperature_2m}°C, ${desc}`;
+    } catch(_){ return '—'; }
+  }
+
+  async function getNearby(lat, lon){
+    try {
+      const q = `[out:json][timeout:20];(node(around:300,${lat},${lon})[amenity];way(around:300,${lat},${lon})[amenity];);out center 15;`;
+      const r = await fetch('https://overpass-api.de/api/interpreter', { method:'POST', body:'data=' + encodeURIComponent(q) });
+      const d = await r.json();
+      return (d.elements || []).slice(0, 10).map(el => ({ name: el.tags?.name || '(без имени)', type: el.tags?.amenity || 'объект' }));
+    } catch(_){ return []; }
+  }
+
+  function toDMS(deg, type){
+    const d = Math.abs(deg);
+    const degrees = Math.floor(d);
+    const minFloat = (d - degrees) * 60;
+    const minutes = Math.floor(minFloat);
+    const seconds = ((minFloat - minutes) * 60).toFixed(2);
+    const dir = type === 'lat' ? (deg >= 0 ? 'N' : 'S') : (deg >= 0 ? 'E' : 'W');
+    return `${degrees}°${minutes}'${seconds}"${dir}`;
+  }
+
+  // ===== Обработка изображения =====
+  function processImage(file){
+    if (!file.type.startsWith('image/')){
+      out.innerHTML = '<span class="err">> это не изображение</span>';
       return;
     }
 
+    out.innerHTML = `<span class="tool-loading">> анализирую ${esc(file.name)}</span>`;
+
+    // Превью
+    const reader = new FileReader();
+    reader.onload = e => {
+      const imgSrc = e.target.result;
+
+      EXIF.getData(e.target, async function(){
+        const all = EXIF.getAllTags(this);
+        const hasExif = all && Object.keys(all).length > 0;
+        const hasGPS = all && all.GPSLatitude && all.GPSLongitude;
+
+        let html = `<div class="geo-result">`;
+
+        // Превью фото
+        html += `<div class="geo-block">
+          <div class="geo-block-title">📷 image preview</div>
+          <img class="geo-image" src="${imgSrc}" alt="preview" style="max-height:300px;object-fit:contain">
+        </div>`;
+
+        // EXIF блок
+        if (hasExif){
+          html += `<div class="geo-block">
+            <div class="geo-block-title">📋 exif data</div>`;
+          const interesting = ['Make','Model','Software','DateTimeOriginal','CreateDate','ModifyDate','LensModel','FocalLength','ExposureTime','FNumber','ISOSpeedRatings'];
+          let anyData = false;
+          interesting.forEach(tag => {
+            if (all[tag] !== undefined && all[tag] !== null && all[tag] !== ''){
+              anyData = true;
+              html += `<div class="geo-row"><span class="k">${tag}:</span><span class="v">${esc(String(all[tag]))}</span></div>`;
+            }
+          });
+          if (!anyData) html += `<div class="geo-row"><span class="v" style="color:var(--dim)">— метаданные не найдены</span></div>`;
+          html += `</div>`;
+        } else {
+          html += `<div class="geo-block">
+            <div class="geo-block-title">📋 exif data</div>
+            <div class="geo-row"><span class="v" style="color:var(--err,#ff2a6d)">⚠️ EXIF отсутствует или удалён</span></div>
+            <div class="geo-row"><span class="v" style="color:var(--dim);font-size:11px">Скорее всего фото из мессенджера, соцсети или скриншот.</span></div>
+          </div>`;
+        }
+
+        // GPS найден → полный анализ
+        if (hasGPS){
+          const lat = toDecimal(all.GPSLatitude, all.GPSLatitudeRef);
+          const lon = toDecimal(all.GPSLongitude, all.GPSLongitudeRef);
+
+          if (lat !== null && lon !== null){
+            html += `</div>`; // закрываем geo-result
+            out.innerHTML = html;
+            // Дозагружаем данные
+            await renderFullGeo(lat, lon, imgSrc);
+            return;
+          }
+        }
+
+        // GPS не найден → AI-инструменты
+        html += `<div class="geo-block">
+          <div class="geo-block-title">🤖 ai geolocation tools</div>
+          <div class="geo-row"><span class="v" style="color:var(--dim);font-size:11px">Загрузи фото в один из сервисов — они определят место по содержимому.</span></div>
+          <div class="geo-actions" style="flex-wrap:wrap;gap:6px">
+            <a href="https://geospy.ai/" target="_blank" rel="noopener">🔍 GeoSpy.ai</a>
+            <a href="https://www.picarta.ai/" target="_blank" rel="noopener">🧠 Picarta.ai</a>
+            <a href="https://lens.google.com/" target="_blank" rel="noopener">🔎 Google Lens</a>
+            <a href="https://yandex.com/images/" target="_blank" rel="noopener">🌐 Yandex Images</a>
+            <a href="https://tineye.com/" target="_blank" rel="noopener">🎯 TinEye</a>
+            <a href="https://www.bing.com/visualsearch" target="_blank" rel="noopener">🅱️ Bing Visual</a>
+          </div>
+          <div style="margin-top:10px;color:var(--dim);font-size:11px;line-height:1.6">
+            💡 <b>Как работать с AI:</b><br>
+            1. Скачай фото в GeoSpy (3 бесплатных/день)<br>
+            2. Получи координаты<br>
+            3. Вставь их в поле ввода выше → увидишь спутник и карту
+          </div>
+        </div>`;
+
+        // Подсказки для ручного анализа
+        html += `<div class="geo-block">
+          <div class="geo-block-title">💡 manual osint tips</div>
+          <div class="geo-row"><span class="k">Язык:</span><span class="v">надписи на каком языке?</span></div>
+          <div class="geo-row"><span class="k">Архитектура:</span><span class="v">стиль зданий, материалы</span></div>
+          <div class="geo-row"><span class="k">Природа:</span><span class="v">растения, рельеф, климат</span></div>
+          <div class="geo-row"><span class="k">Транспорт:</span><span class="v">номера машин, марка автобусов</span></div>
+          <div class="geo-row"><span class="k">Тени:</span><span class="v">направление солнца = сторона света</span></div>
+          <div class="geo-row"><span class="k">Улики:</span><span class="v">вывески, бренды, реклама</span></div>
+        </div>`;
+
+        html += `</div>`;
+        out.innerHTML = html;
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ===== Анализ координат (ручной ввод) =====
+  async function analyzeCoordsFromString(raw){
+    const coords = parseCoords(raw);
+
+    if (coords){
+      await renderFullGeo(coords.lat, coords.lon, null);
+      return;
+    }
+
+    // Иначе — это адрес
+    out.innerHTML = '<span class="tool-loading">> геокодинг адреса</span>';
+    try {
+      const results = await forwardGeocode(raw);
+      if (!results.length){
+        out.innerHTML = `<span class="err">> адрес не найден</span>\n\n<span style="color:var(--dim)">Попробуй координаты: 55.7539, 37.6208</span>`;
+        return;
+      }
+      const lat = parseFloat(results[0].lat);
+      const lon = parseFloat(results[0].lon);
+      await renderFullGeo(lat, lon, null);
+    } catch(e){
+      out.innerHTML = `<span class="err">> ошибка: ${esc(e.message)}</span>`;
+    }
+  }
+
+  // ===== Полный рендер по координатам =====
+  async function renderFullGeo(lat, lon, imgSrc){
+    out.innerHTML = '<span class="tool-loading">> получение данных</span>';
+
     const [addr, elev, weather, nearby] = await Promise.all([
-      addressData ? Promise.resolve({ display_name: addressData.display_name, address: addressData.address }) : reverseGeocode(lat, lon).catch(()=>null),
+      reverseGeocode(lat, lon),
       getElevation(lat, lon),
       getWeather(lat, lon),
       getNearby(lat, lon)
@@ -779,6 +1004,13 @@ function toolGeo(){
     const coordStr = `${latFixed}, ${lonFixed}`;
 
     let html = `<div class="geo-result">`;
+
+    if (imgSrc){
+      html += `<div class="geo-block">
+        <div class="geo-block-title">📷 source image</div>
+        <img class="geo-image" src="${imgSrc}" alt="source" style="max-height:300px;object-fit:contain">
+      </div>`;
+    }
 
     html += `<div class="geo-block">
       <div class="geo-block-title">📍 coordinates</div>
@@ -796,6 +1028,7 @@ function toolGeo(){
         ${a.country ? `<div class="geo-row"><span class="k">country:</span><span class="v">${esc(a.country)}</span></div>` : ''}
         ${a.state ? `<div class="geo-row"><span class="k">region:</span><span class="v">${esc(a.state)}</span></div>` : ''}
         ${a.city || a.town || a.village ? `<div class="geo-row"><span class="k">city:</span><span class="v">${esc(a.city || a.town || a.village)}</span></div>` : ''}
+        ${a.road ? `<div class="geo-row"><span class="k">street:</span><span class="v">${esc(a.road)}</span></div>` : ''}
         ${a.postcode ? `<div class="geo-row"><span class="k">postcode:</span><span class="v">${esc(a.postcode)}</span></div>` : ''}
       </div>`;
     }
@@ -849,7 +1082,14 @@ function toolGeo(){
         });
       });
     }
-  });
+  }
+
+  // Конвертация EXIF GPS в десятичные градусы
+  function toDecimal(arr, ref){
+    if (!Array.isArray(arr) || arr.length < 3) return null;
+    const d = arr[0] + arr[1]/60 + arr[2]/3600;
+    return (ref === 'S' || ref === 'W') ? -d : d;
+  }
 }
 
   // =========================================================
