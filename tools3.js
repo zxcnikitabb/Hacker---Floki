@@ -1104,7 +1104,6 @@ function toolGeo(){
     dork: toolDork,
      geo: toolGeo,
   };
-
   document.querySelectorAll('.tool-card').forEach(card => {
     const tool = card.dataset.tool;
     if (handlers[tool]){
