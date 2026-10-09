@@ -1,6 +1,6 @@
 /* =========================================================
    HACKER — FLOKI :: OSINT TOOLS v3
-   Sweep / Domain / Reverse / IP Location / JWT / Dork
+   Sweep / Domain / Reverse / IP Location / JWT / Dork / GEOINT
    ========================================================= */
 (() => {
   const modal = document.getElementById('toolModal');
@@ -414,7 +414,6 @@
       let html = '';
       const parts = raw.split('.');
 
-      // JWT
       if (parts.length === 3 && parts.every(p => /^[A-Za-z0-9_\-]+$/.test(p))){
         html += `<span class="ok">> JWT DETECTED</span>\n\n`;
 
@@ -446,7 +445,7 @@
           if (h.typ) html += `<span class="key">  type:</span> <span class="val">${esc(h.typ)}</span>\n`;
 
           if (h.alg === 'none'){
-            html += `<span class="err">  ⚠️ ALGORITHM NONE — токен не подписан! Уязвимость.</span>\n`;
+            html += `<span class="err">  ALGORITHM NONE — токен не подписан! Уязвимость.</span>\n`;
           }
 
           if (p.exp){
@@ -476,7 +475,6 @@
         return;
       }
 
-      // Base64
       if (/^[A-Za-z0-9+/=_\-\s]+$/.test(raw)){
         const decoded = decodeB64(raw.replace(/\s/g, ''));
         if (decoded !== null){
@@ -497,7 +495,6 @@
         }
       }
 
-      // HEX
       if (/^[0-9a-fA-F\s]+$/.test(raw) && raw.replace(/\s/g,'').length % 2 === 0){
         try {
           const hex = raw.replace(/\s/g,'');
@@ -514,7 +511,6 @@
         } catch(_){}
       }
 
-      // URL-encoded
       if (/%[0-9a-fA-F]{2}/.test(raw)){
         try {
           const decoded = decodeURIComponent(raw);
@@ -555,26 +551,26 @@
     `;
 
     const dorks = [
-      { name:'🔓 Open Directories',      d:'site:{target} intitle:"index of"' },
-      { name:'📄 PDF Documents',         d:'site:{target} filetype:pdf' },
-      { name:'📊 Excel Files',           d:'site:{target} filetype:xls OR filetype:xlsx' },
-      { name:'📝 Word Documents',        d:'site:{target} filetype:doc OR filetype:docx' },
-      { name:'🗄 Database Dumps',        d:'site:{target} filetype:sql OR filetype:db' },
-      { name:'⚙️ Config Files',          d:'site:{target} filetype:env OR filetype:config OR filetype:cfg' },
-      { name:'🔑 Passwords',             d:'site:{target} intext:"password" filetype:txt' },
-      { name:'🔐 Login Pages',           d:'site:{target} inurl:login OR inurl:admin OR inurl:signin' },
-      { name:'📷 Open Webcams',          d:'inurl:"/view/index.shtml" OR intitle:"Live View / - AXIS"' },
-      { name:'🚪 phpMyAdmin',            d:'site:{target} intitle:phpMyAdmin' },
-      { name:'🗂 Git Repos',             d:'site:{target} inurl:".git" OR intitle:"Index of /.git"' },
-      { name:'📡 Admin Panels',          d:'site:{target} intitle:"admin panel" OR inurl:admin' },
-      { name:'🔍 Directory Listing',     d:'site:{target} intitle:"Index of /"' },
-      { name:'💾 Backups',               d:'site:{target} filetype:bak OR filetype:backup OR filetype:old' },
-      { name:'📧 Emails',                d:'site:{target} "@{target}"' },
-      { name:'🌐 Subdomains',            d:'site:*.{target}' },
-      { name:'🔗 API Endpoints',         d:'site:{target} inurl:api' },
-      { name:'📁 Sensitive Files',       d:'site:{target} filetype:log OR filetype:txt' },
-      { name:'🗝 SSH Keys',              d:'site:{target} filetype:pem OR filetype:key' },
-      { name:'🧪 Test/Staging',          d:'site:{target} inurl:test OR inurl:staging OR inurl:dev' },
+      { name:'Open Directories',      d:'site:{target} intitle:"index of"' },
+      { name:'PDF Documents',         d:'site:{target} filetype:pdf' },
+      { name:'Excel Files',           d:'site:{target} filetype:xls OR filetype:xlsx' },
+      { name:'Word Documents',        d:'site:{target} filetype:doc OR filetype:docx' },
+      { name:'Database Dumps',        d:'site:{target} filetype:sql OR filetype:db' },
+      { name:'Config Files',          d:'site:{target} filetype:env OR filetype:config OR filetype:cfg' },
+      { name:'Passwords',             d:'site:{target} intext:"password" filetype:txt' },
+      { name:'Login Pages',           d:'site:{target} inurl:login OR inurl:admin OR inurl:signin' },
+      { name:'Open Webcams',          d:'inurl:"/view/index.shtml" OR intitle:"Live View / - AXIS"' },
+      { name:'phpMyAdmin',            d:'site:{target} intitle:phpMyAdmin' },
+      { name:'Git Repos',             d:'site:{target} inurl:".git" OR intitle:"Index of /.git"' },
+      { name:'Admin Panels',          d:'site:{target} intitle:"admin panel" OR inurl:admin' },
+      { name:'Directory Listing',     d:'site:{target} intitle:"Index of /"' },
+      { name:'Backups',               d:'site:{target} filetype:bak OR filetype:backup OR filetype:old' },
+      { name:'Emails',                d:'site:{target} "@{target}"' },
+      { name:'Subdomains',            d:'site:*.{target}' },
+      { name:'API Endpoints',         d:'site:{target} inurl:api' },
+      { name:'Sensitive Files',       d:'site:{target} filetype:log OR filetype:txt' },
+      { name:'SSH Keys',              d:'site:{target} filetype:pem OR filetype:key' },
+      { name:'Test/Staging',          d:'site:{target} inurl:test OR inurl:staging OR inurl:dev' },
     ];
 
     const listEl = document.getElementById('dorkList');
@@ -629,8 +625,8 @@
       html += extLink('Yandex',     `https://yandex.com/search/?text=${encoded}`, 'для СНГ');
 
       html += `\n<span class="ok">> quick actions</span>\n`;
-      html += `  <span class="key">·</span> <a class="val" href="javascript:void(0)" id="copyDork" style="text-decoration:none">Скопировать dork</a> <span style="color:var(--dim);font-size:11px">— в буфер обмена</span>\n`;
-      html += `  <span class="key">·</span> <a class="val" href="javascript:void(0)" id="copyQuery" style="text-decoration:none">Скопировать query</a> <span style="color:var(--dim);font-size:11px">— без URL-кодирования</span>\n`;
+      html += `  <span class="key">·</span> <a class="val" href="javascript:void(0)" id="copyDork" style="text-decoration:none">Скопировать dork</a>\n`;
+      html += `  <span class="key">·</span> <a class="val" href="javascript:void(0)" id="copyQuery" style="text-decoration:none">Скопировать query</a>\n`;
 
       html += `\n<span style="color:var(--dim);font-size:11px">⚠️ Используй легально. Dorking по чужим сайтам без разрешения — нарушение закона.</span>`;
 
@@ -650,447 +646,341 @@
       });
     });
   }
-// =========================================================
-// GEOINT :: УНИВЕРСАЛЬНЫЙ ГЕОПРОСТРАНСТВЕННЫЙ АНАЛИЗ
-// =========================================================
-function toolGeo(){
-  openModal('GEOINT :: geo analysis');
 
-  modalBody.innerHTML = `
-    <div class="tool-input-row">
-      <input id="geoInput" type="text" placeholder="55.7558, 37.6173 или адрес" autocomplete="off">
-      <button id="geoRun">▶ ANALYZE</button>
-    </div>
-    <div class="geo-hint-input">
-      > поддерживается: координаты · адрес · Plus Code · ссылка Google/OSM
-    </div>
-    <div id="geoOut" class="tool-output" style="margin-top:14px">> введи координаты или адрес</div>
-  `;
+  // =========================================================
+  // GEOINT :: ГИБРИДНЫЙ (EXIF + AI tools)
+  // =========================================================
+  function toolGeo(){
+    openModal('GEOINT :: image intelligence');
 
-  const input = document.getElementById('geoInput');
-  const btn   = document.getElementById('geoRun');
-  const out   = document.getElementById('geoOut');
-
-  input.focus();
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
-
-  function parseCoords(str){
-    const m = str.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
-    if (m) return { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
-    const g = str.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-    if (g) return { lat: parseFloat(g[1]), lon: parseFloat(g[2]) };
-    const o = str.match(/map=\d+\/(-?\d+\.?\d*)\/(-?\d+\.?\d*)/);
-    if (o) return { lat: parseFloat(o[1]), lon: parseFloat(o[2]) };
-    return null;
-  }
-
-  async function reverseGeocode(lat, lon){
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ru`;
-    const r = await fetch(url, { headers: { 'User-Agent': 'HACKER-FLOKI-OSINT' } });
-    return r.json();
-  }
-
-  async function forwardGeocode(q){
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=ru`;
-    const r = await fetch(url, { headers: { 'User-Agent': 'HACKER-FLOKI-OSINT' } });
-    return r.json();
-  }
-
-  async function getElevation(lat, lon){
-    try {
-      const r = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
-      const d = await r.json();
-      return d.results?.[0]?.elevation ?? '—';
-    } catch(_){ return '—'; }
-  }
-
-  async function getWeather(lat, lon){
-    try {
-      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`);
-      const d = await r.json();
-      const c = d.current || {};
-      const code = c.weather_code;
-      const desc = {0:'ясно',1:'преим. ясно',2:'перем. облачно',3:'облачно',45:'туман',48:'изморозь',51:'морось',61:'дождь',63:'дождь',65:'ливень',71:'снег',73:'снег',75:'снегопад',80:'ливни',95:'гроза',96:'гроза с градом'}[code] || '—';
-      return `${c.temperature_2m}°C, ${desc}`;
-    } catch(_){ return '—'; }
-  }
-
-  async function getNearby(lat, lon){
-    try {
-      const q = `[out:json][timeout:20];(node(around:300,${lat},${lon})[amenity];way(around:300,${lat},${lon})[amenity];);out center 15;`;
-      const r = await fetch('https://overpass-api.de/api/interpreter', { method:'POST', body:'data=' + encodeURIComponent(q) });
-      const d = await r.json();
-      return (d.elements || []).slice(0, 10).map(el => ({ name: el.tags?.name || '(без имени)', type: el.tags?.amenity || 'объект' }));
-    } catch(_){ return []; }
-  }
-
-  function toDMS(deg, type){
-    const d = Math.abs(deg);
-    const degrees = Math.floor(d);
-    const minFloat = (d - degrees) * 60;
-    const minutes = Math.floor(minFloat);
-    const seconds = ((minFloat - minutes) * 60).toFixed(2);
-    const dir = type === 'lat' ? (deg >= 0 ? 'N' : 'S') : (deg >= 0 ? 'E' : 'W');
-    return `${degrees}°${minutes}'${seconds}"${dir}`;
-  }
-
-  btn.addEventListener('click', async () => {
-    const raw = input.value.trim();
-    if (!raw) return;
-
-    out.innerHTML = '<span class="tool-loading">> анализ</span>';
-
-    let lat, lon, addressData = null;
-
-// =========================================================
-// GEOINT :: ГИБРИДНЫЙ (EXIF + AI tools)
-// =========================================================
-function toolGeo(){
-  openModal('GEOINT :: image intelligence');
-
-  modalBody.innerHTML = `
-    <div style="margin-bottom:14px">
-      <label class="drop-zone" id="geoDrop">
-        <input type="file" id="geoFile" accept="image/*">
-        <div>📷 загрузи фото (клик или drag&drop)<br>
-        <span style="font-size:11px;color:var(--dim)">файл обрабатывается локально, никуда не уходит</span></div>
-      </label>
-    </div>
-
-    <div style="margin-bottom:16px">
-      <div style="color:var(--dim);font-size:11px;letter-spacing:1px;margin-bottom:8px">> или введи координаты / адрес вручную:</div>
-      <div class="tool-input-row">
-        <input id="geoManual" type="text" placeholder="55.7558, 37.6173 или адрес" autocomplete="off">
-        <button id="geoManualRun">▶ ANALYZE</button>
+    modalBody.innerHTML = `
+      <div style="margin-bottom:14px">
+        <label class="drop-zone" id="geoDrop">
+          <input type="file" id="geoFile" accept="image/*">
+          <div>📷 загрузи фото (клик или drag&drop)<br>
+          <span style="font-size:11px;color:var(--dim)">файл обрабатывается локально, никуда не уходит</span></div>
+        </label>
       </div>
-    </div>
 
-    <div id="geoOut" class="tool-output">> жду фото или координаты</div>
-  `;
+      <div style="margin-bottom:16px">
+        <div style="color:var(--dim);font-size:11px;letter-spacing:1px;margin-bottom:8px">> или введи координаты / адрес вручную:</div>
+        <div class="tool-input-row">
+          <input id="geoManual" type="text" placeholder="55.7558, 37.6173 или адрес" autocomplete="off">
+          <button id="geoManualRun">▶ ANALYZE</button>
+        </div>
+      </div>
 
-  const dropZone = document.getElementById('geoDrop');
-  const fileEl   = document.getElementById('geoFile');
-  const manualIn = document.getElementById('geoManual');
-  const manualBtn= document.getElementById('geoManualRun');
-  const out      = document.getElementById('geoOut');
+      <div id="geoOut" class="tool-output">> жду фото или координаты</div>
+    `;
 
-  // ===== Drag & drop =====
-  ['dragenter','dragover'].forEach(ev =>
-    dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('dragover'); })
-  );
-  ['dragleave','drop'].forEach(ev =>
-    dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('dragover'); })
-  );
-  dropZone.addEventListener('drop', e => {
-    const f = e.dataTransfer.files[0];
-    if (f) processImage(f);
-  });
-  fileEl.addEventListener('change', e => {
-    const f = e.target.files[0];
-    if (f) processImage(f);
-  });
+    const dropZone  = document.getElementById('geoDrop');
+    const fileEl    = document.getElementById('geoFile');
+    const manualIn  = document.getElementById('geoManual');
+    const manualBtn = document.getElementById('geoManualRun');
+    const out       = document.getElementById('geoOut');
 
-  manualBtn.addEventListener('click', () => {
-    const raw = manualIn.value.trim();
-    if (raw) analyzeCoordsFromString(raw);
-  });
-  manualIn.addEventListener('keydown', e => { if (e.key === 'Enter') manualBtn.click(); });
+    ['dragenter','dragover'].forEach(ev =>
+      dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('dragover'); })
+    );
+    ['dragleave','drop'].forEach(ev =>
+      dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('dragover'); })
+    );
+    dropZone.addEventListener('drop', e => {
+      const f = e.dataTransfer.files[0];
+      if (f) processImage(f);
+    });
+    fileEl.addEventListener('change', e => {
+      const f = e.target.files[0];
+      if (f) processImage(f);
+    });
 
-  // ===== Парсинг координат из строки =====
-  function parseCoords(str){
-    const m = str.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
-    if (m) return { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
-    const g = str.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-    if (g) return { lat: parseFloat(g[1]), lon: parseFloat(g[2]) };
-    const o = str.match(/map=\d+\/(-?\d+\.?\d*)\/(-?\d+\.?\d*)/);
-    if (o) return { lat: parseFloat(o[1]), lon: parseFloat(o[2]) };
-    return null;
-  }
+    manualBtn.addEventListener('click', () => {
+      const raw = manualIn.value.trim();
+      if (raw) analyzeCoordsFromString(raw);
+    });
+    manualIn.addEventListener('keydown', e => { if (e.key === 'Enter') manualBtn.click(); });
 
-  // ===== Геокодеры =====
-  async function reverseGeocode(lat, lon){
-    try {
-      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ru`;
-      const r = await fetch(url, { headers: { 'User-Agent': 'HACKER-FLOKI-OSINT' } });
-      return r.json();
-    } catch(_){ return null; }
-  }
-
-  async function forwardGeocode(q){
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=ru`;
-      const r = await fetch(url, { headers: { 'User-Agent': 'HACKER-FLOKI-OSINT' } });
-      return r.json();
-    } catch(_){ return []; }
-  }
-
-  async function getElevation(lat, lon){
-    try {
-      const r = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
-      const d = await r.json();
-      return d.results?.[0]?.elevation ?? '—';
-    } catch(_){ return '—'; }
-  }
-
-  async function getWeather(lat, lon){
-    try {
-      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`);
-      const d = await r.json();
-      const c = d.current || {};
-      const code = c.weather_code;
-      const desc = {0:'ясно',1:'преим. ясно',2:'перем. облачно',3:'облачно',45:'туман',48:'изморозь',51:'морось',61:'дождь',63:'дождь',65:'ливень',71:'снег',73:'снег',75:'снегопад',80:'ливни',95:'гроза',96:'гроза с градом'}[code] || '—';
-      return `${c.temperature_2m}°C, ${desc}`;
-    } catch(_){ return '—'; }
-  }
-
-  async function getNearby(lat, lon){
-    try {
-      const q = `[out:json][timeout:20];(node(around:300,${lat},${lon})[amenity];way(around:300,${lat},${lon})[amenity];);out center 15;`;
-      const r = await fetch('https://overpass-api.de/api/interpreter', { method:'POST', body:'data=' + encodeURIComponent(q) });
-      const d = await r.json();
-      return (d.elements || []).slice(0, 10).map(el => ({ name: el.tags?.name || '(без имени)', type: el.tags?.amenity || 'объект' }));
-    } catch(_){ return []; }
-  }
-
-  function toDMS(deg, type){
-    const d = Math.abs(deg);
-    const degrees = Math.floor(d);
-    const minFloat = (d - degrees) * 60;
-    const minutes = Math.floor(minFloat);
-    const seconds = ((minFloat - minutes) * 60).toFixed(2);
-    const dir = type === 'lat' ? (deg >= 0 ? 'N' : 'S') : (deg >= 0 ? 'E' : 'W');
-    return `${degrees}°${minutes}'${seconds}"${dir}`;
-  }
-
-  // ===== Обработка изображения =====
-  function processImage(file){
-    if (!file.type.startsWith('image/')){
-      out.innerHTML = '<span class="err">> это не изображение</span>';
-      return;
+    function parseCoords(str){
+      const m = str.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
+      if (m) return { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
+      const g = str.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+      if (g) return { lat: parseFloat(g[1]), lon: parseFloat(g[2]) };
+      const o = str.match(/map=\d+\/(-?\d+\.?\d*)\/(-?\d+\.?\d*)/);
+      if (o) return { lat: parseFloat(o[1]), lon: parseFloat(o[2]) };
+      return null;
     }
 
-    out.innerHTML = `<span class="tool-loading">> анализирую ${esc(file.name)}</span>`;
-
-    // Превью
-    const reader = new FileReader();
-    reader.onload = e => {
-      const imgSrc = e.target.result;
-
-      EXIF.getData(e.target, async function(){
-        const all = EXIF.getAllTags(this);
-        const hasExif = all && Object.keys(all).length > 0;
-        const hasGPS = all && all.GPSLatitude && all.GPSLongitude;
-
-        let html = `<div class="geo-result">`;
-
-        // Превью фото
-        html += `<div class="geo-block">
-          <div class="geo-block-title">📷 image preview</div>
-          <img class="geo-image" src="${imgSrc}" alt="preview" style="max-height:300px;object-fit:contain">
-        </div>`;
-
-        // EXIF блок
-        if (hasExif){
-          html += `<div class="geo-block">
-            <div class="geo-block-title">📋 exif data</div>`;
-          const interesting = ['Make','Model','Software','DateTimeOriginal','CreateDate','ModifyDate','LensModel','FocalLength','ExposureTime','FNumber','ISOSpeedRatings'];
-          let anyData = false;
-          interesting.forEach(tag => {
-            if (all[tag] !== undefined && all[tag] !== null && all[tag] !== ''){
-              anyData = true;
-              html += `<div class="geo-row"><span class="k">${tag}:</span><span class="v">${esc(String(all[tag]))}</span></div>`;
-            }
-          });
-          if (!anyData) html += `<div class="geo-row"><span class="v" style="color:var(--dim)">— метаданные не найдены</span></div>`;
-          html += `</div>`;
-        } else {
-          html += `<div class="geo-block">
-            <div class="geo-block-title">📋 exif data</div>
-            <div class="geo-row"><span class="v" style="color:var(--err,#ff2a6d)">⚠️ EXIF отсутствует или удалён</span></div>
-            <div class="geo-row"><span class="v" style="color:var(--dim);font-size:11px">Скорее всего фото из мессенджера, соцсети или скриншот.</span></div>
-          </div>`;
-        }
-
-        // GPS найден → полный анализ
-        if (hasGPS){
-          const lat = toDecimal(all.GPSLatitude, all.GPSLatitudeRef);
-          const lon = toDecimal(all.GPSLongitude, all.GPSLongitudeRef);
-
-          if (lat !== null && lon !== null){
-            html += `</div>`; // закрываем geo-result
-            out.innerHTML = html;
-            // Дозагружаем данные
-            await renderFullGeo(lat, lon, imgSrc);
-            return;
-          }
-        }
-
-        // GPS не найден → AI-инструменты
-        html += `<div class="geo-block">
-          <div class="geo-block-title">🤖 ai geolocation tools</div>
-          <div class="geo-row"><span class="v" style="color:var(--dim);font-size:11px">Загрузи фото в один из сервисов — они определят место по содержимому.</span></div>
-          <div class="geo-actions" style="flex-wrap:wrap;gap:6px">
-            <a href="https://geospy.ai/" target="_blank" rel="noopener">🔍 GeoSpy.ai</a>
-            <a href="https://www.picarta.ai/" target="_blank" rel="noopener">🧠 Picarta.ai</a>
-            <a href="https://lens.google.com/" target="_blank" rel="noopener">🔎 Google Lens</a>
-            <a href="https://yandex.com/images/" target="_blank" rel="noopener">🌐 Yandex Images</a>
-            <a href="https://tineye.com/" target="_blank" rel="noopener">🎯 TinEye</a>
-            <a href="https://www.bing.com/visualsearch" target="_blank" rel="noopener">🅱️ Bing Visual</a>
-          </div>
-          <div style="margin-top:10px;color:var(--dim);font-size:11px;line-height:1.6">
-            💡 <b>Как работать с AI:</b><br>
-            1. Скачай фото в GeoSpy (3 бесплатных/день)<br>
-            2. Получи координаты<br>
-            3. Вставь их в поле ввода выше → увидишь спутник и карту
-          </div>
-        </div>`;
-
-        // Подсказки для ручного анализа
-        html += `<div class="geo-block">
-          <div class="geo-block-title">💡 manual osint tips</div>
-          <div class="geo-row"><span class="k">Язык:</span><span class="v">надписи на каком языке?</span></div>
-          <div class="geo-row"><span class="k">Архитектура:</span><span class="v">стиль зданий, материалы</span></div>
-          <div class="geo-row"><span class="k">Природа:</span><span class="v">растения, рельеф, климат</span></div>
-          <div class="geo-row"><span class="k">Транспорт:</span><span class="v">номера машин, марка автобусов</span></div>
-          <div class="geo-row"><span class="k">Тени:</span><span class="v">направление солнца = сторона света</span></div>
-          <div class="geo-row"><span class="k">Улики:</span><span class="v">вывески, бренды, реклама</span></div>
-        </div>`;
-
-        html += `</div>`;
-        out.innerHTML = html;
-      });
-    };
-    reader.readAsDataURL(file);
-  }
-
-  // ===== Анализ координат (ручной ввод) =====
-  async function analyzeCoordsFromString(raw){
-    const coords = parseCoords(raw);
-
-    if (coords){
-      await renderFullGeo(coords.lat, coords.lon, null);
-      return;
+    async function reverseGeocode(lat, lon){
+      try {
+        const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ru`;
+        const r = await fetch(url, { headers: { 'User-Agent': 'HACKER-FLOKI-OSINT' } });
+        return r.json();
+      } catch(_){ return null; }
     }
 
-    // Иначе — это адрес
-    out.innerHTML = '<span class="tool-loading">> геокодинг адреса</span>';
-    try {
-      const results = await forwardGeocode(raw);
-      if (!results.length){
-        out.innerHTML = `<span class="err">> адрес не найден</span>\n\n<span style="color:var(--dim)">Попробуй координаты: 55.7539, 37.6208</span>`;
+    async function forwardGeocode(q){
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=ru`;
+        const r = await fetch(url, { headers: { 'User-Agent': 'HACKER-FLOKI-OSINT' } });
+        return r.json();
+      } catch(_){ return []; }
+    }
+
+    async function getElevation(lat, lon){
+      try {
+        const r = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
+        const d = await r.json();
+        return d.results?.[0]?.elevation ?? '—';
+      } catch(_){ return '—'; }
+    }
+
+    async function getWeather(lat, lon){
+      try {
+        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`);
+        const d = await r.json();
+        const c = d.current || {};
+        const code = c.weather_code;
+        const desc = {0:'ясно',1:'преим. ясно',2:'перем. облачно',3:'облачно',45:'туман',48:'изморозь',51:'морось',61:'дождь',63:'дождь',65:'ливень',71:'снег',73:'снег',75:'снегопад',80:'ливни',95:'гроза',96:'гроза с градом'}[code] || '—';
+        return `${c.temperature_2m}°C, ${desc}`;
+      } catch(_){ return '—'; }
+    }
+
+    async function getNearby(lat, lon){
+      try {
+        const q = `[out:json][timeout:20];(node(around:300,${lat},${lon})[amenity];way(around:300,${lat},${lon})[amenity];);out center 15;`;
+        const r = await fetch('https://overpass-api.de/api/interpreter', { method:'POST', body:'data=' + encodeURIComponent(q) });
+        const d = await r.json();
+        return (d.elements || []).slice(0, 10).map(el => ({ name: el.tags?.name || '(без имени)', type: el.tags?.amenity || 'объект' }));
+      } catch(_){ return []; }
+    }
+
+    function toDMS(deg, type){
+      const d = Math.abs(deg);
+      const degrees = Math.floor(d);
+      const minFloat = (d - degrees) * 60;
+      const minutes = Math.floor(minFloat);
+      const seconds = ((minFloat - minutes) * 60).toFixed(2);
+      const dir = type === 'lat' ? (deg >= 0 ? 'N' : 'S') : (deg >= 0 ? 'E' : 'W');
+      return `${degrees}°${minutes}'${seconds}"${dir}`;
+    }
+
+    function processImage(file){
+      if (!file.type.startsWith('image/')){
+        out.innerHTML = '<span class="err">> это не изображение</span>';
         return;
       }
-      const lat = parseFloat(results[0].lat);
-      const lon = parseFloat(results[0].lon);
-      await renderFullGeo(lat, lon, null);
-    } catch(e){
-      out.innerHTML = `<span class="err">> ошибка: ${esc(e.message)}</span>`;
-    }
-  }
 
-  // ===== Полный рендер по координатам =====
-  async function renderFullGeo(lat, lon, imgSrc){
-    out.innerHTML = '<span class="tool-loading">> получение данных</span>';
+      out.innerHTML = `<span class="tool-loading">> анализирую ${esc(file.name)}</span>`;
 
-    const [addr, elev, weather, nearby] = await Promise.all([
-      reverseGeocode(lat, lon),
-      getElevation(lat, lon),
-      getWeather(lat, lon),
-      getNearby(lat, lon)
-    ]);
+      const reader = new FileReader();
+      reader.onload = e => {
+        const imgSrc = e.target.result;
 
-    const latFixed = lat.toFixed(6);
-    const lonFixed = lon.toFixed(6);
-    const coordStr = `${latFixed}, ${lonFixed}`;
+        EXIF.getData(e.target, async function(){
+          const all = EXIF.getAllTags(this);
+          const hasExif = all && Object.keys(all).length > 0;
+          const hasGPS = all && all.GPSLatitude && all.GPSLongitude;
 
-    let html = `<div class="geo-result">`;
+          let html = `<div class="geo-result">`;
 
-    if (imgSrc){
-      html += `<div class="geo-block">
-        <div class="geo-block-title">📷 source image</div>
-        <img class="geo-image" src="${imgSrc}" alt="source" style="max-height:300px;object-fit:contain">
-      </div>`;
-    }
+          html += `<div class="geo-block">
+            <div class="geo-block-title">📷 image preview</div>
+            <img class="geo-image" src="${imgSrc}" alt="preview" style="max-height:300px;object-fit:contain">
+          </div>`;
 
-    html += `<div class="geo-block">
-      <div class="geo-block-title">📍 coordinates</div>
-      <div class="geo-row"><span class="k">latitude:</span><span class="v">${latFixed}</span></div>
-      <div class="geo-row"><span class="k">longitude:</span><span class="v">${lonFixed}</span></div>
-      <div class="geo-row"><span class="k">DMS:</span><span class="v">${toDMS(lat, 'lat')} ${toDMS(lon, 'lon')}</span></div>
-      <div class="geo-actions"><button id="geoCopy">📋 Скопировать</button></div>
-    </div>`;
+          if (hasExif){
+            html += `<div class="geo-block">
+              <div class="geo-block-title">📋 exif data</div>`;
+            const interesting = ['Make','Model','Software','DateTimeOriginal','CreateDate','ModifyDate','LensModel','FocalLength','ExposureTime','FNumber','ISOSpeedRatings'];
+            let anyData = false;
+            interesting.forEach(tag => {
+              if (all[tag] !== undefined && all[tag] !== null && all[tag] !== ''){
+                anyData = true;
+                html += `<div class="geo-row"><span class="k">${tag}:</span><span class="v">${esc(String(all[tag]))}</span></div>`;
+              }
+            });
+            if (!anyData) html += `<div class="geo-row"><span class="v" style="color:var(--dim)">— метаданные не найдены</span></div>`;
+            html += `</div>`;
+          } else {
+            html += `<div class="geo-block">
+              <div class="geo-block-title">📋 exif data</div>
+              <div class="geo-row"><span class="v" style="color:#ff2a6d">⚠️ EXIF отсутствует или удалён</span></div>
+              <div class="geo-row"><span class="v" style="color:var(--dim);font-size:11px">Скорее всего фото из мессенджера, соцсети или скриншот.</span></div>
+            </div>`;
+          }
 
-    if (addr){
-      const a = addr.address || {};
-      html += `<div class="geo-block">
-        <div class="geo-block-title">🌍 address</div>
-        ${addr.display_name ? `<div class="geo-row"><span class="k">full:</span><span class="v">${esc(addr.display_name)}</span></div>` : ''}
-        ${a.country ? `<div class="geo-row"><span class="k">country:</span><span class="v">${esc(a.country)}</span></div>` : ''}
-        ${a.state ? `<div class="geo-row"><span class="k">region:</span><span class="v">${esc(a.state)}</span></div>` : ''}
-        ${a.city || a.town || a.village ? `<div class="geo-row"><span class="k">city:</span><span class="v">${esc(a.city || a.town || a.village)}</span></div>` : ''}
-        ${a.road ? `<div class="geo-row"><span class="k">street:</span><span class="v">${esc(a.road)}</span></div>` : ''}
-        ${a.postcode ? `<div class="geo-row"><span class="k">postcode:</span><span class="v">${esc(a.postcode)}</span></div>` : ''}
-      </div>`;
-    }
+          if (hasGPS){
+            const lat = toDecimal(all.GPSLatitude, all.GPSLatitudeRef);
+            const lon = toDecimal(all.GPSLongitude, all.GPSLongitudeRef);
 
-    html += `<div class="geo-block">
-      <div class="geo-block-title">⛰️ nature</div>
-      <div class="geo-row"><span class="k">elevation:</span><span class="v">${elev} м</span></div>
-      <div class="geo-row"><span class="k">weather:</span><span class="v">${esc(weather)}</span></div>
-    </div>`;
+            if (lat !== null && lon !== null){
+              html += `</div>`;
+              out.innerHTML = html;
+              await renderFullGeo(lat, lon, imgSrc);
+              return;
+            }
+          }
 
-    const satUrl = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${lon-0.003},${lat-0.002},${lon+0.003},${lat+0.002}&bboxSR=4326&imageSR=4326&size=600,400&f=image&format=png`;
-    html += `<div class="geo-block">
-      <div class="geo-block-title">🛰️ satellite view</div>
-      <img class="geo-image" src="${satUrl}" alt="satellite" onerror="this.style.display='none'">
-    </div>`;
+          html += `<div class="geo-block">
+            <div class="geo-block-title">🤖 ai geolocation tools</div>
+            <div class="geo-row"><span class="v" style="color:var(--dim);font-size:11px">Загрузи фото в один из сервисов — они определят место по содержимому.</span></div>
+            <div class="geo-actions" style="flex-wrap:wrap;gap:6px">
+              <a href="https://geospy.ai/" target="_blank" rel="noopener">🔍 GeoSpy.ai</a>
+              <a href="https://www.picarta.ai/" target="_blank" rel="noopener">🧠 Picarta.ai</a>
+              <a href="https://lens.google.com/" target="_blank" rel="noopener">🔎 Google Lens</a>
+              <a href="https://yandex.com/images/" target="_blank" rel="noopener">🌐 Yandex Images</a>
+              <a href="https://tineye.com/" target="_blank" rel="noopener">🎯 TinEye</a>
+              <a href="https://www.bing.com/visualsearch" target="_blank" rel="noopener">🅱️ Bing Visual</a>
+            </div>
+            <div style="margin-top:10px;color:var(--dim);font-size:11px;line-height:1.6">
+              💡 <b>Как работать с AI:</b><br>
+              1. Скачай фото в GeoSpy (3 бесплатных/день)<br>
+              2. Получи координаты<br>
+              3. Вставь их в поле ввода выше → увидишь спутник и карту
+            </div>
+          </div>`;
 
-    const mapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=16&size=600x300&maptype=mapnik&markers=${lat},${lon},red-pushpin`;
-    html += `<div class="geo-block">
-      <div class="geo-block-title">🗺️ street map</div>
-      <img class="geo-image" src="${mapUrl}" alt="map" onerror="this.style.display='none'">
-    </div>`;
+          html += `<div class="geo-block">
+            <div class="geo-block-title">💡 manual osint tips</div>
+            <div class="geo-row"><span class="k">Язык:</span><span class="v">надписи на каком языке?</span></div>
+            <div class="geo-row"><span class="k">Архитектура:</span><span class="v">стиль зданий, материалы</span></div>
+            <div class="geo-row"><span class="k">Природа:</span><span class="v">растения, рельеф, климат</span></div>
+            <div class="geo-row"><span class="k">Транспорт:</span><span class="v">номера машин, марка автобусов</span></div>
+            <div class="geo-row"><span class="k">Тени:</span><span class="v">направление солнца = сторона света</span></div>
+            <div class="geo-row"><span class="k">Улики:</span><span class="v">вывески, бренды, реклама</span></div>
+          </div>`;
 
-    if (nearby.length){
-      html += `<div class="geo-block"><div class="geo-block-title">🏢 nearby (300m)</div>`;
-      nearby.forEach(o => {
-        html += `<div class="geo-row"><span class="k">${esc(o.type)}:</span><span class="v">${esc(o.name)}</span></div>`;
-      });
-      html += `</div>`;
-    }
-
-    html += `<div class="geo-block">
-      <div class="geo-block-title">🔗 external</div>
-      <div class="geo-actions">
-        <a href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" rel="noopener">Google Maps</a>
-        <a href="https://yandex.ru/maps/?pt=${lon},${lat}&z=17&l=map" target="_blank" rel="noopener">Yandex Maps</a>
-        <a href="https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=17/${lat}/${lon}" target="_blank" rel="noopener">OSM</a>
-        <a href="https://earth.google.com/web/@${lat},${lon},0a,1000d,35y" target="_blank" rel="noopener">Google Earth</a>
-        <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lon}" target="_blank" rel="noopener">Street View</a>
-      </div>
-    </div>`;
-
-    html += `</div>`;
-    out.innerHTML = html;
-
-    const copyBtn = document.getElementById('geoCopy');
-    if (copyBtn){
-      copyBtn.addEventListener('click', () => {
-        navigator.clipboard?.writeText(coordStr).then(() => {
-          copyBtn.textContent = '✓ Скопировано';
-          setTimeout(() => { copyBtn.textContent = '📋 Скопировать'; }, 1500);
+          html += `</div>`;
+          out.innerHTML = html;
         });
-      });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function analyzeCoordsFromString(raw){
+      const coords = parseCoords(raw);
+
+      if (coords){
+        await renderFullGeo(coords.lat, coords.lon, null);
+        return;
+      }
+
+      out.innerHTML = '<span class="tool-loading">> геокодинг адреса</span>';
+      try {
+        const results = await forwardGeocode(raw);
+        if (!results.length){
+          out.innerHTML = `<span class="err">> адрес не найден</span>\n\n<span style="color:var(--dim)">Попробуй координаты: 55.7539, 37.6208</span>`;
+          return;
+        }
+        const lat = parseFloat(results[0].lat);
+        const lon = parseFloat(results[0].lon);
+        await renderFullGeo(lat, lon, null);
+      } catch(e){
+        out.innerHTML = `<span class="err">> ошибка: ${esc(e.message)}</span>`;
+      }
+    }
+
+    async function renderFullGeo(lat, lon, imgSrc){
+      out.innerHTML = '<span class="tool-loading">> получение данных</span>';
+
+      const [addr, elev, weather, nearby] = await Promise.all([
+        reverseGeocode(lat, lon),
+        getElevation(lat, lon),
+        getWeather(lat, lon),
+        getNearby(lat, lon)
+      ]);
+
+      const latFixed = lat.toFixed(6);
+      const lonFixed = lon.toFixed(6);
+      const coordStr = `${latFixed}, ${lonFixed}`;
+
+      let html = `<div class="geo-result">`;
+
+      if (imgSrc){
+        html += `<div class="geo-block">
+          <div class="geo-block-title">📷 source image</div>
+          <img class="geo-image" src="${imgSrc}" alt="source" style="max-height:300px;object-fit:contain">
+        </div>`;
+      }
+
+      html += `<div class="geo-block">
+        <div class="geo-block-title">📍 coordinates</div>
+        <div class="geo-row"><span class="k">latitude:</span><span class="v">${latFixed}</span></div>
+        <div class="geo-row"><span class="k">longitude:</span><span class="v">${lonFixed}</span></div>
+        <div class="geo-row"><span class="k">DMS:</span><span class="v">${toDMS(lat, 'lat')} ${toDMS(lon, 'lon')}</span></div>
+        <div class="geo-actions"><button id="geoCopy">📋 Скопировать</button></div>
+      </div>`;
+
+      if (addr){
+        const a = addr.address || {};
+        html += `<div class="geo-block">
+          <div class="geo-block-title">🌍 address</div>
+          ${addr.display_name ? `<div class="geo-row"><span class="k">full:</span><span class="v">${esc(addr.display_name)}</span></div>` : ''}
+          ${a.country ? `<div class="geo-row"><span class="k">country:</span><span class="v">${esc(a.country)}</span></div>` : ''}
+          ${a.state ? `<div class="geo-row"><span class="k">region:</span><span class="v">${esc(a.state)}</span></div>` : ''}
+          ${a.city || a.town || a.village ? `<div class="geo-row"><span class="k">city:</span><span class="v">${esc(a.city || a.town || a.village)}</span></div>` : ''}
+          ${a.road ? `<div class="geo-row"><span class="k">street:</span><span class="v">${esc(a.road)}</span></div>` : ''}
+          ${a.postcode ? `<div class="geo-row"><span class="k">postcode:</span><span class="v">${esc(a.postcode)}</span></div>` : ''}
+        </div>`;
+      }
+
+      html += `<div class="geo-block">
+        <div class="geo-block-title">⛰️ nature</div>
+        <div class="geo-row"><span class="k">elevation:</span><span class="v">${elev} м</span></div>
+        <div class="geo-row"><span class="k">weather:</span><span class="v">${esc(weather)}</span></div>
+      </div>`;
+
+      const satUrl = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${lon-0.003},${lat-0.002},${lon+0.003},${lat+0.002}&bboxSR=4326&imageSR=4326&size=600,400&f=image&format=png`;
+      html += `<div class="geo-block">
+        <div class="geo-block-title">🛰️ satellite view</div>
+        <img class="geo-image" src="${satUrl}" alt="satellite" onerror="this.style.display='none'">
+      </div>`;
+
+      const mapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=16&size=600x300&maptype=mapnik&markers=${lat},${lon},red-pushpin`;
+      html += `<div class="geo-block">
+        <div class="geo-block-title">🗺️ street map</div>
+        <img class="geo-image" src="${mapUrl}" alt="map" onerror="this.style.display='none'">
+      </div>`;
+
+      if (nearby.length){
+        html += `<div class="geo-block"><div class="geo-block-title">🏢 nearby (300m)</div>`;
+        nearby.forEach(o => {
+          html += `<div class="geo-row"><span class="k">${esc(o.type)}:</span><span class="v">${esc(o.name)}</span></div>`;
+        });
+        html += `</div>`;
+      }
+
+      html += `<div class="geo-block">
+        <div class="geo-block-title">🔗 external</div>
+        <div class="geo-actions">
+          <a href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" rel="noopener">Google Maps</a>
+          <a href="https://yandex.ru/maps/?pt=${lon},${lat}&z=17&l=map" target="_blank" rel="noopener">Yandex Maps</a>
+          <a href="https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=17/${lat}/${lon}" target="_blank" rel="noopener">OSM</a>
+          <a href="https://earth.google.com/web/@${lat},${lon},0a,1000d,35y" target="_blank" rel="noopener">Google Earth</a>
+          <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lon}" target="_blank" rel="noopener">Street View</a>
+        </div>
+      </div>`;
+
+      html += `</div>`;
+      out.innerHTML = html;
+
+      const copyBtn = document.getElementById('geoCopy');
+      if (copyBtn){
+        copyBtn.addEventListener('click', () => {
+          navigator.clipboard?.writeText(coordStr).then(() => {
+            copyBtn.textContent = '✓ Скопировано';
+            setTimeout(() => { copyBtn.textContent = '📋 Скопировать'; }, 1500);
+          });
+        });
+      }
+    }
+
+    function toDecimal(arr, ref){
+      if (!Array.isArray(arr) || arr.length < 3) return null;
+      const d = arr[0] + arr[1]/60 + arr[2]/3600;
+      return (ref === 'S' || ref === 'W') ? -d : d;
     }
   }
-
-  // Конвертация EXIF GPS в десятичные градусы
-  function toDecimal(arr, ref){
-    if (!Array.isArray(arr) || arr.length < 3) return null;
-    const d = arr[0] + arr[1]/60 + arr[2]/3600;
-    return (ref === 'S' || ref === 'W') ? -d : d;
-  }
-}
 
   // =========================================================
   // ПОДКЛЮЧЕНИЕ
@@ -1102,8 +992,9 @@ function toolGeo(){
     iploc: toolIpLoc,
     jwt: toolJwt,
     dork: toolDork,
-     geo: toolGeo,
+    geo: toolGeo,
   };
+
   document.querySelectorAll('.tool-card').forEach(card => {
     const tool = card.dataset.tool;
     if (handlers[tool]){
